@@ -49,9 +49,11 @@ public class AuthService {
         // Same error for unknown email, wrong password and disabled account,
         // so callers cannot probe which emails are registered.
         User user = userRepository.findByEmail(normalizeEmail(request.email()))
-                .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
-                .filter(User::isEnabled)
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, INVALID_CREDENTIALS));
+
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash()) || !user.isEnabled()) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, INVALID_CREDENTIALS);
+        }
 
         return new AuthResponse(
                 jwtService.generateToken(user),
