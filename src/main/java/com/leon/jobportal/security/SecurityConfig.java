@@ -32,7 +32,10 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/api/v1/auth/**",
             "/actuator/health",
-            "/error"
+            "/error",
+            "/swagger-ui.html",
+            "/swagger-ui/**",
+            "/v3/api-docs/**"
     };
 
     private static final AuthenticationEntryPoint UNAUTHORIZED_ENTRY_POINT = (request, response, e) ->
