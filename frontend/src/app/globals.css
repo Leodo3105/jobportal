@@ -1,0 +1,77 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ===== Bảng màu của JobPortal =====
+   Các tên biến (--primary, --muted...) theo quy ước của shadcn/ui,
+   để component shadcn thêm sau này tự dùng đúng màu. */
+:root {
+  --radius: 0.625rem;
+
+  --background: #f2f6f4; /* nền trang: xám xanh rất nhạt */
+  --foreground: #10292d; /* chữ chính: xanh đen */
+  --card: #ffffff;
+  --card-foreground: #10292d;
+  --popover: #ffffff;
+  --popover-foreground: #10292d;
+
+  --primary: #0b7a66; /* màu thương hiệu: xanh ngọc */
+  --primary-foreground: #ffffff;
+  --secondary: #dff1ec; /* nền nhạt của màu thương hiệu */
+  --secondary-foreground: #08594a;
+
+  --muted: #e8efec;
+  --muted-foreground: #4b6166; /* chữ phụ */
+  --accent: #dff1ec;
+  --accent-foreground: #08594a;
+  --destructive: #c2410c;
+
+  --border: #d5e0dc;
+  --input: #d5e0dc;
+  --ring: #0b7a66;
+
+  --ink: #10292d; /* nền tối cho khối nhấn */
+}
+
+/* Cho Tailwind biết các màu trên, để viết được class như bg-primary, text-muted-foreground */
+@theme inline {
+  --font-sans: "Be Vietnam Pro", system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ink: var(--ink);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply tracking-tight text-balance;
+  }
+}

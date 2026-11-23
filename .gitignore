@@ -1,0 +1,26 @@
+# Ghi chú làm việc, chỉ giữ ở máy
+CLAUDE.md
+.claude/
+backend/NOTES.md
+frontend/DESIGN.md
+
+# Bí mật (.env.example vẫn được đưa lên)
+.env
+.env.local
+.env.*.local
+
+# Thư viện, file build, log
+node_modules/
+.next/
+*.tsbuildinfo
+*.log
+
+# File người dùng tải lên (CV, ảnh) và log của test
+backend/uploads/
+backend/tests/.logs/
+
+# Hệ điều hành, editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
