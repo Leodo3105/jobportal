@@ -8,7 +8,7 @@ import { ErrorNotice } from "@/components/error-notice";
 import { CompanyLogo } from "@/components/jobs/company-logo";
 import { JobCard } from "@/components/jobs/job-card";
 import { Badge } from "@/components/ui/badge";
-import { getCompany, getJobs } from "@/lib/api";
+import { getCompany, getJobViewer, getJobs, saveStateFor } from "@/lib/api";
 import { companySizeLabel } from "@/lib/format";
 import type { PublicCompany } from "@/types/api";
 
@@ -46,7 +46,8 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
   if (!company) notFound();
 
   // Tối đa 50 tin (giới hạn của API); công ty nhiều hơn thì cần phân trang
-  const jobs = await getJobs({ company: id, limit: 50 }).catch(() => null);
+  // Gọi cùng lúc; viewer: ai đang xem, để hiện nút "Lưu tin" trên thẻ
+  const [jobs, viewer] = await Promise.all([getJobs({ company: id, limit: 50 }).catch(() => null), getJobViewer()]);
   const links = [
     { label: "Website", url: safeUrl(company.website) },
     { label: "Facebook", url: safeUrl(company.socialMedia?.facebook) },
@@ -136,7 +137,7 @@ export default async function CompanyPage({ params }: CompanyPageProps) {
           ) : (
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {jobs.data.map((job) => (
-                <JobCard key={job._id} job={job} />
+                <JobCard key={job._id} job={job} save={saveStateFor(viewer, job._id)} />
               ))}
             </div>
           )}

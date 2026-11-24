@@ -2,14 +2,23 @@ import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 
 import { CompanyLogo } from "@/components/jobs/company-logo";
+import { SaveJobButton } from "@/components/jobs/save-job-button";
 import { Badge } from "@/components/ui/badge";
-import { EXPERIENCE_LABELS, JOB_TYPE_LABELS, formatSalary, timeAgo } from "@/lib/format";
-import type { Job } from "@/types/api";
+import { EXPERIENCE_LABELS, JOB_TYPE_LABELS, formatSalary, isJobOpen, timeAgo } from "@/lib/format";
+import type { JobCardData } from "@/types/api";
 
 const MAX_SKILLS = 3; // chỉ hiện 3 kỹ năng đầu cho thẻ gọn
 
-export function JobCard({ job }: { job: Job }) {
+interface JobCardProps {
+  job: JobCardData;
+  // Có thì hiện nút "Lưu tin" (khách: bấm đi đăng nhập). Không truyền (NTD/admin) thì không có nút.
+  save?: { mode: "guest" | "jobseeker"; saved: boolean };
+}
+
+export function JobCard({ job, save }: JobCardProps) {
   const extraSkills = job.skills.length - MAX_SKILLS;
+  // Danh sách công khai chỉ có tin đang mở; chỉ danh sách đã lưu mới có tin đóng (kèm status)
+  const closed = job.status !== undefined && !isJobOpen({ status: job.status, applicationDeadline: job.applicationDeadline });
 
   return (
     <article className="relative flex flex-col gap-4 rounded-xl border bg-card p-5 transition-colors hover:border-primary">
@@ -22,7 +31,10 @@ export function JobCard({ job }: { job: Job }) {
             <span className="truncate">{job.location}</span>
           </p>
         </div>
-        {job.featured && <Badge>Nổi bật</Badge>}
+        {closed ? <Badge variant="outline">Tin đã đóng</Badge> : job.featured && <Badge>Nổi bật</Badge>}
+        {save && (
+          <SaveJobButton jobId={job._id} jobTitle={job.title} mode={save.mode} initialSaved={save.saved} variant="icon" />
+        )}
       </div>
 
       <div>

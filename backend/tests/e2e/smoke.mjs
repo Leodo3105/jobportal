@@ -267,6 +267,24 @@ await expect('', 'DELETE', `/api/saved-jobs/${jobId}`, 200, { token: J });
 await expect('chưa lưu', 'DELETE', `/api/saved-jobs/${jobId}`, 404, { token: J });
 await expect('NTD không được', 'GET', '/api/saved-jobs', 403, { token: E });
 await api('POST', `/api/saved-jobs/${jobId}`, { token: J });
+// job2Id đang 'closed': tin đã đóng vẫn lưu được
+await expect('lưu tin đã đóng', 'POST', `/api/saved-jobs/${job2Id}`, 201, { token: J });
+await expect('', 'GET', '/api/saved-jobs/ids', 200, { token: J }, (r) => r.data.data?.length === 2 && r.data.data.includes(jobId) && r.data.data.includes(job2Id));
+await expect('NTD không được', 'GET', '/api/saved-jobs/ids', 403, { token: E });
+await expect('phân trang', 'GET', '/api/saved-jobs?limit=1&page=2', 200, { token: J },
+  (r) => r.data.total === 2 && r.data.totalPages === 2 && r.data.count === 1 && r.data.data[0].job?._id === jobId && 'salaryMin' in r.data.data[0].job && Array.isArray(r.data.data[0].job.skills));
+await expect('page/limit sai không 500', 'GET', '/api/saved-jobs?limit=-5&page=abc', 200, { token: J }, (r) => r.data.total === 2);
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'draft' } });
+await expect('tin chuyển về nháp bị ẩn khỏi danh sách', 'GET', '/api/saved-jobs', 200, { token: J },
+  (r) => r.data.total === 1 && r.data.data.every((s) => s.job?._id !== job2Id));
+await api('DELETE', `/api/saved-jobs/${job2Id}`, { token: J });
+await expect('không lưu được tin nháp', 'POST', `/api/saved-jobs/${job2Id}`, 404, { token: J });
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'closed' } });
+await expect('', 'POST', `/api/saved-jobs/${job2Id}`, 201, { token: J });
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'draft' } });
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'closed' } });
+await expect('tin mở lại từ nháp thì hiện lại', 'GET', '/api/saved-jobs', 200, { token: J }, (r) => r.data.total === 2);
+await api('DELETE', `/api/saved-jobs/${job2Id}`, { token: J });
 
 // ===================== Applications =====================
 group = 'Applications';

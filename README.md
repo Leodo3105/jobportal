@@ -18,6 +18,7 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 - Hồ sơ: thông tin chung, kỹ năng, kinh nghiệm, học vấn, liên kết mạng xã hội.
 - Quản lý CV (PDF/DOC/DOCX ≤ 5MB); nộp đơn bằng CV trong hồ sơ hoặc tải file riêng, kèm thư giới thiệu.
 - Theo dõi đơn: trạng thái, lịch phỏng vấn, phản hồi của nhà tuyển dụng; rút đơn và ứng tuyển lại.
+- Lưu tin để xem sau (nút trên thẻ tin và trang chi tiết), trang "Việc đã lưu" có phân trang.
 
 **Nhà tuyển dụng**
 - Trang tổng quan: số tin đang hiện, đơn chưa xem, biểu đồ 6 tháng, tin nhiều đơn nhất.
@@ -194,7 +195,8 @@ Mọi API có tiền tố `/api`. Ký hiệu: 🔓 công khai, 🔑 cần đăng
 | Thông báo `/notifications` | `GET /`, `PUT /:id/read`, `PUT /read-all`, `DELETE /:id` 🔑 |
 | Tổng quan `/dashboard` | `GET /admin`, `GET /employer`, `GET /jobseeker` |
 | Quản trị `/admin` [AD] | `GET /users`, `PUT /users/:id/status`, `DELETE /users/:id`, `GET /jobs`, `PUT /jobs/:id/featured`, `GET /companies`, `PUT /companies/:id/subscription`, `GET /categories` |
-| Khác | `/saved-jobs` [JS], `/messages` 🔑 (chưa có giao diện) |
+| Việc đã lưu `/saved-jobs` [JS] | `GET /` (phân trang), `GET /ids`, `POST /:jobId`, `DELETE /:jobId` |
+| Khác | `/messages` 🔑 (chưa có giao diện) |
 
 ## Hướng phát triển
 

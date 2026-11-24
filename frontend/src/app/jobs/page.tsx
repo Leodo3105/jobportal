@@ -4,7 +4,7 @@ import { ErrorNotice } from "@/components/error-notice";
 import { JobGrid } from "@/components/jobs/job-grid";
 import { Pagination } from "@/components/jobs/pagination";
 import { SearchForm } from "@/components/jobs/search-form";
-import { getCategories, getJobs } from "@/lib/api";
+import { getCategories, getJobViewer, getJobs } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Việc làm" };
 
@@ -20,12 +20,14 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   const page = Math.max(Number(pageParam) || 1, 1); // "abc" hoặc thiếu => trang 1
   const filters = { keyword, location, category };
 
-  const [jobsResult, categoriesResult] = await Promise.allSettled([
+  const [jobsResult, categoriesResult, viewerResult] = await Promise.allSettled([
     getJobs({ ...filters, page, limit: PAGE_SIZE }),
     getCategories(),
+    getJobViewer(), // ai đang xem, để hiện nút "Lưu tin" trên thẻ
   ]);
 
   const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+  const viewer = viewerResult.status === "fulfilled" ? viewerResult.value : null;
   const isFiltering = Boolean(keyword || location || category);
 
   return (
@@ -43,6 +45,7 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           <div className="flex flex-col gap-8">
             <JobGrid
               jobs={jobsResult.value.data}
+              viewer={viewer}
               emptyTitle={isFiltering ? "Không có việc nào khớp bộ lọc" : "Chưa có việc làm nào"}
               emptyText={
                 isFiltering

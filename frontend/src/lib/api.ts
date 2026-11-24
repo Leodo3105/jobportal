@@ -23,6 +23,7 @@ import type {
   MyCompany,
   NotificationListResponse,
   PublicCompany,
+  SavedJobListResponse,
 } from "@/types/api";
 
 const API_URL = process.env.API_URL ?? "http://localhost:5000";
@@ -171,6 +172,37 @@ export async function getMyApplications(): Promise<MyApplication[] | null> {
 // Một đơn của ứng viên đang đăng nhập. Id sai (400), đơn của người khác (403), không có (404) đều trả null.
 export async function getMyApplication(id: string): Promise<MyApplication | null> {
   return getWithCookie<MyApplication>(`/api/applications/${encodeURIComponent(id)}`);
+}
+
+// ===== Việc đã lưu =====
+
+export const SAVED_JOBS_PER_PAGE = 12;
+
+// Danh sách việc đã lưu của ứng viên, phân trang. null khi lỗi hoặc hết phiên.
+export async function getSavedJobs(page = 1): Promise<SavedJobListResponse | null> {
+  return getBodyWithCookie<SavedJobListResponse>(`/api/saved-jobs?page=${page}&limit=${SAVED_JOBS_PER_PAGE}`);
+}
+
+// Id các tin ứng viên đã lưu, để tô nút "Lưu tin". Lỗi thì coi như chưa lưu gì (trang công khai không hỏng theo).
+export const getSavedJobIds = cache(async (): Promise<string[]> => {
+  return (await getWithCookie<string[]>("/api/saved-jobs/ids")) ?? [];
+});
+
+// Người đang xem có thấy nút "Lưu tin" không, và tin nào đã lưu:
+// khách thấy nút (bấm thì đi đăng nhập), ứng viên lưu được, NTD/admin không thấy nút (null).
+export type JobViewer = { mode: "guest" } | { mode: "jobseeker"; savedIds: string[] } | null;
+
+export const getJobViewer = cache(async (): Promise<JobViewer> => {
+  const user = await getCurrentUser(); // đã cache(), header cũng gọi nên không tốn thêm request
+  if (!user) return { mode: "guest" };
+  if (user.role !== "jobseeker") return null;
+  return { mode: "jobseeker", savedIds: await getSavedJobIds() };
+});
+
+// Prop `save` cho JobCard: undefined (không có nút) khi người xem là NTD/admin
+export function saveStateFor(viewer: JobViewer | undefined, jobId: string) {
+  if (!viewer) return undefined;
+  return { mode: viewer.mode, saved: viewer.mode === "jobseeker" && viewer.savedIds.includes(jobId) };
 }
 
 // ===== Khu nhà tuyển dụng =====

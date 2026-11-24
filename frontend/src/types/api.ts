@@ -34,6 +34,25 @@ export interface Job {
 
 export type JobStatus = "active" | "closed" | "draft" | "expired";
 
+// ===== Việc đã lưu (GET /api/saved-jobs) =====
+
+// Dữ liệu đủ để vẽ thẻ tin (JobCard). Danh sách đã lưu không có mô tả, ngành, nhưng có trạng thái tin.
+export type JobCardData = Omit<Job, "description" | "category"> & { status?: JobStatus };
+
+export interface SavedJobItem {
+  _id: string;
+  createdAt: string; // lúc lưu
+  job: JobCardData | null; // null nếu tin đã bị xoá
+}
+
+export interface SavedJobListResponse {
+  success: boolean;
+  count: number;
+  total: number;
+  totalPages: number;
+  data: SavedJobItem[];
+}
+
 export type EducationLevel = "high-school" | "associate" | "bachelor" | "master" | "phd" | "any";
 
 export type CompanySize = "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1000+";

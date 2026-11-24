@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { CalendarClock, Eye } from "lucide-react";
 
+import { SaveJobButton } from "@/components/jobs/save-job-button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import type { JobViewer } from "@/lib/api";
 import {
   APPLICATION_STATUS_LABELS,
   deadlineHint,
@@ -19,7 +21,7 @@ interface ApplyPanelProps {
   application: MyApplication | null; // đơn của ứng viên cho tin này (kể cả đã rút)
 }
 
-export function ApplyPanel({ job, user, application }: ApplyPanelProps) {
+export function ApplyPanel({ job, user, application, viewer }: ApplyPanelProps & { viewer: JobViewer }) {
   const open = isJobOpen(job);
 
   return (
@@ -37,6 +39,18 @@ export function ApplyPanel({ job, user, application }: ApplyPanelProps) {
 
       <div className="mt-5 border-t pt-5">
         <ApplyAction job={job} user={user} application={application} open={open} />
+        {/* Lưu tin: nút outline dưới Ứng tuyển (primary duy nhất). Hiện cả khi tin đã đóng. NTD/admin: viewer = null */}
+        {viewer && (
+          <div className="mt-3">
+            <SaveJobButton
+              jobId={job._id}
+              jobTitle={job.title}
+              mode={viewer.mode}
+              initialSaved={viewer.mode === "jobseeker" && viewer.savedIds.includes(job._id)}
+              variant="full"
+            />
+          </div>
+        )}
       </div>
 
       <p className="mt-5 flex items-center gap-2 text-xs text-muted-foreground">

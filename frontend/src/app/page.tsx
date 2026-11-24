@@ -5,18 +5,20 @@ import { CategoryGrid } from "@/components/home/category-grid";
 import { EmployerCta } from "@/components/home/employer-cta";
 import { Hero } from "@/components/home/hero";
 import { JobGrid } from "@/components/jobs/job-grid";
-import { getCategories, getJobs } from "@/lib/api";
+import { getCategories, getJobViewer, getJobs } from "@/lib/api";
 
 // Đây là Server Component (mặc định trong App Router): hàm async chạy trên server,
 // gọi API xong mới gửi HTML hoàn chỉnh về trình duyệt.
 export default async function HomePage() {
-  // Gọi 2 API cùng lúc. allSettled: một cái lỗi thì cái kia vẫn dùng được.
-  const [jobsResult, categoriesResult] = await Promise.allSettled([
+  // Gọi cùng lúc. allSettled: một cái lỗi thì cái kia vẫn dùng được.
+  const [jobsResult, categoriesResult, viewerResult] = await Promise.allSettled([
     getJobs({ limit: 6 }),
     getCategories(),
+    getJobViewer(), // ai đang xem, để hiện nút "Lưu tin" trên thẻ
   ]);
 
   const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+  const viewer = viewerResult.status === "fulfilled" ? viewerResult.value : null;
 
   return (
     <>
@@ -40,7 +42,7 @@ export default async function HomePage() {
         </div>
         <div className="mt-6">
           {jobsResult.status === "fulfilled" ? (
-            <JobGrid jobs={jobsResult.value.data} />
+            <JobGrid jobs={jobsResult.value.data} viewer={viewer} />
           ) : (
             <ErrorNotice error={jobsResult.reason} />
           )}

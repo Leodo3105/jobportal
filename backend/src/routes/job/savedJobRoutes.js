@@ -2,7 +2,8 @@ import express from 'express';
 import { 
   saveJob, 
   unsaveJob, 
-  getSavedJobs 
+  getSavedJobs,
+  getSavedJobIds
 } from '../../controllers/job/savedJobController.js';
 import { protect, authorize } from '../../middlewares/auth.js';
 import validateObjectId from '../../middlewares/validateObjectId.js';
@@ -18,7 +19,10 @@ router.post('/:jobId', protect, authorize('jobseeker'), saveJob);
 // Unsave a job
 router.delete('/:jobId', protect, authorize('jobseeker'), unsaveJob);
 
-// Get user's saved jobs
+// Get user's saved jobs (phân trang)
 router.get('/', protect, authorize('jobseeker'), getSavedJobs);
+
+// Chỉ id các tin đã lưu (FE tô nút "Lưu tin" trên thẻ)
+router.get('/ids', protect, authorize('jobseeker'), getSavedJobIds);
 
 export default router;

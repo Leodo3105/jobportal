@@ -11,7 +11,7 @@ import { CompanyCard } from "@/components/job-detail/company-card";
 import { CompanyLogo } from "@/components/jobs/company-logo";
 import { JobCard } from "@/components/jobs/job-card";
 import { Badge } from "@/components/ui/badge";
-import { getCurrentUser, getJob, getMyApplicationForJob, getSimilarJobs } from "@/lib/api";
+import { getCurrentUser, getJob, getJobViewer, getMyApplicationForJob, getSimilarJobs, saveStateFor } from "@/lib/api";
 import { EDUCATION_LABELS, EXPERIENCE_LABELS, JOB_TYPE_LABELS, isJobOpen } from "@/lib/format";
 import type { JobDetail } from "@/types/api";
 
@@ -55,8 +55,8 @@ export default async function JobPage({ params, searchParams }: JobPageProps) {
 
   if (!job) notFound(); // id sai định dạng, không có tin, hoặc tin nháp
 
-  // Hai việc này không phụ thuộc nhau nên gọi song song
-  const [user, similarJobs] = await Promise.all([getCurrentUser(), getSimilarJobs(id)]);
+  // Ba việc này không phụ thuộc nhau nên gọi song song
+  const [user, similarJobs, viewer] = await Promise.all([getCurrentUser(), getSimilarJobs(id), getJobViewer()]);
   // Chỉ ứng viên mới có đơn ứng tuyển
   const application = user?.role === "jobseeker" ? await getMyApplicationForJob(id) : null;
   const open = isJobOpen(job);
@@ -131,7 +131,7 @@ export default async function JobPage({ params, searchParams }: JobPageProps) {
         </header>
 
         <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:self-start">
-          <ApplyPanel job={job} user={user} application={application} />
+          <ApplyPanel job={job} user={user} application={application} viewer={viewer} />
           <CompanyCard company={job.company} />
         </aside>
 
@@ -149,7 +149,7 @@ export default async function JobPage({ params, searchParams }: JobPageProps) {
           </h2>
           <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {similarJobs.slice(0, MAX_SIMILAR).map((similar) => (
-              <JobCard key={similar._id} job={similar} />
+              <JobCard key={similar._id} job={similar} save={saveStateFor(viewer, similar._id)} />
             ))}
           </div>
         </section>

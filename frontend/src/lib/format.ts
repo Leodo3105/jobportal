@@ -25,7 +25,7 @@ function toMillions(value: number): string {
   return (value / 1_000_000).toLocaleString("vi-VN", { maximumFractionDigits: 1 });
 }
 
-export function formatSalary(job: Job): string {
+export function formatSalary(job: Pick<Job, "salaryMin" | "salaryMax" | "salaryCurrency" | "showSalary">): string {
   const { salaryMin, salaryMax, salaryCurrency, showSalary } = job;
 
   if (!showSalary || (!salaryMin && !salaryMax)) {

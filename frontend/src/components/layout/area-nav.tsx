@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, Building2, FileText, LayoutDashboard, Send, Tags, UserRound, Users } from "lucide-react";
+import { Bookmark, Briefcase, Building2, FileText, LayoutDashboard, Send, Tags, UserRound, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ const AREAS = {
     label: "Khu ứng viên",
     links: [
       { href: "/jobseeker/applications", label: "Đơn ứng tuyển", Icon: Send },
+      { href: "/jobseeker/saved", label: "Việc đã lưu", Icon: Bookmark },
       { href: "/jobseeker/profile", label: "Hồ sơ", Icon: UserRound },
       { href: "/jobseeker/cv", label: "CV của tôi", Icon: FileText },
     ],
