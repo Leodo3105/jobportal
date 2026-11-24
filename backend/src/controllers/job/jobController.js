@@ -258,6 +258,14 @@ export const updateJob = async (req, res) => {
     }
     const updates = result.value;
 
+    // Gia hạn tin đã hết hạn (tác vụ định kỳ đặt "expired") thì tự mở lại.
+    // status vẫn không nhận từ body; server tự đặt. Gửi lại đúng hạn cũ (đã qua) thì tin giữ "expired".
+    const reopened =
+      job.status === 'expired' &&
+      updates.applicationDeadline &&
+      new Date(updates.applicationDeadline) > new Date();
+    if (reopened) updates.status = 'active';
+
     // Update job
     job = await Job.findByIdAndUpdate(req.params.id, updates, {
       new: true,
@@ -267,7 +275,7 @@ export const updateJob = async (req, res) => {
     res.status(200).json({
       success: true,
       data: job,
-      message: 'Tin tuyển dụng đã được cập nhật'
+      message: reopened ? 'Đã gia hạn và mở lại tin tuyển dụng' : 'Tin tuyển dụng đã được cập nhật'
     });
   } catch (error) {
     console.error('Update job error:', error);

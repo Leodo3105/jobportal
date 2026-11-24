@@ -19,7 +19,7 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 
 **Nhà tuyển dụng**
 - Trang tổng quan: số tin đang hiện, đơn chưa xem, biểu đồ 6 tháng, tin nhiều đơn nhất.
-- Thông tin công ty và logo; đăng, sửa, đổi trạng thái, xoá tin.
+- Thông tin công ty và logo; đăng, sửa, đổi trạng thái, xoá tin. Tin hết hạn nộp được báo qua thông báo; gia hạn thì tin tự mở lại.
 - Xử lý đơn: xem hồ sơ và CV ứng viên, đổi trạng thái kèm phản hồi, hẹn phỏng vấn, ghi chú nội bộ (ứng viên không thấy).
 
 **Quản trị viên**
@@ -28,6 +28,8 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 - Tin tuyển dụng: đổi trạng thái, đánh dấu nổi bật, xoá. Công ty: đổi gói dịch vụ. Danh mục: thêm, đổi tên (tin và công ty đổi theo), ẩn, xoá.
 
 **Mọi vai trò:** thông báo (chuông kèm số chưa đọc), cài đặt tài khoản (ảnh đại diện, thông tin, đổi mật khẩu).
+
+**Tự động (mỗi giờ):** tin quá hạn nộp chuyển sang "Hết hạn"; gói dịch vụ trả phí hết hạn về gói Miễn phí và bỏ đánh dấu nổi bật. Nhà tuyển dụng nhận thông báo cho từng trường hợp.
 
 ## Điểm kỹ thuật đáng chú ý
 
@@ -38,6 +40,7 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 - **Phân quyền theo vai trò** ở middleware (`protect`, `authorize`), không nhận các field đặc quyền từ body (`role`, `featured`, `status`, gói dịch vụ…).
 - **File tải lên:** chống path traversal khi xử lý tên file; CV không phục vụ tĩnh mà chỉ tải được qua API có kiểm tra quyền.
 - **Rate limit** cho đăng nhập, đăng ký, quên mật khẩu và đổi mật khẩu.
+- **Tác vụ định kỳ** bằng `node-cron` chạy trong server (`src/jobs/`), chạy lại nhiều lần không tạo thay đổi hay thông báo trùng; chạy tay được bằng `npm run tasks`.
 - **Thống kê theo tháng** đếm bằng `aggregate`, nhóm theo giờ Việt Nam (`Asia/Ho_Chi_Minh`).
 
 ## Chạy trên máy
@@ -52,7 +55,7 @@ npm install
 cp .env.example .env        # Windows: copy .env.example .env
 # sửa .env: MONGO_URI, JWT_SECRET
 npm run seed                # dữ liệu demo (tuỳ chọn)
-npm run dev
+npm run dev                 # tự chạy tác vụ định kỳ mỗi giờ
 ```
 
 **2. Frontend** (cổng 3000), mở terminal khác
@@ -79,6 +82,8 @@ cd backend
 npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"
 ```
 
+**Chạy tác vụ định kỳ ngay** (không đợi tới đầu giờ): `cd backend && npm run tasks`.
+
 **Quên mật khẩu khi chạy ở máy:** để `SMTP_HOST` trống trong `.env`, link đặt lại mật khẩu được in ra console của backend thay vì gửi email.
 
 ### Biến môi trường (`backend/.env`)
@@ -97,7 +102,7 @@ Frontend chỉ có `API_URL` (mặc định `http://localhost:5000`), xem `front
 
 ## Test
 
-Backend có 6 bộ test end-to-end gọi API thật (khoảng 400 kiểm tra), gồm một bộ smoke gọi gần 90 endpoint với đúng vai trò và báo lỗi nếu có bất kỳ response 500 nào.
+Backend có 7 bộ test end-to-end gọi API thật (khoảng 420 kiểm tra), gồm một bộ smoke gọi gần 90 endpoint với đúng vai trò và báo lỗi nếu có bất kỳ response 500 nào.
 
 ```bash
 cd backend
@@ -119,7 +124,8 @@ backend/
     models/
     middlewares/         protect/authorize, checkOrigin, validateObjectId, xử lý lỗi, multer
     utils/               kiểm tra dữ liệu, escape regex, cookie, gửi email, xoá tài khoản
-  scripts/               createAdmin.js, seed.js
+    jobs/                tác vụ định kỳ (tin và gói hết hạn) và lịch chạy node-cron
+  scripts/               createAdmin.js, seed.js, runScheduledTasks.js
   tests/                 run-all.mjs + e2e/*.mjs
 frontend/
   src/
@@ -150,7 +156,6 @@ Mọi API có tiền tố `/api`. Ký hiệu: 🔓 công khai, 🔑 cần đăng
 
 ## Hướng phát triển
 
-- Job định kỳ: tự chuyển tin quá hạn sang hết hạn, gói dịch vụ hết hạn về miễn phí.
 - Docker Compose (MongoDB + backend + frontend) và cấu hình deploy.
 - Thanh toán gói dịch vụ qua VNPay; tìm ứng viên cho gói trả phí.
 - Giao diện tin nhắn, cập nhật realtime bằng socket.io.

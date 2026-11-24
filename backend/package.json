@@ -10,6 +10,7 @@
     "start": "node src/server.js",
     "create-admin": "node scripts/createAdmin.js",
     "seed": "node scripts/seed.js",
+    "tasks": "node scripts/runScheduledTasks.js",
     "test:e2e": "node tests/run-all.mjs"
   },
   "engines": {
@@ -27,6 +28,7 @@
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.6.0",
     "nodemailer": "^10.5.0",
     "slugify": "^1.6.6"
   },

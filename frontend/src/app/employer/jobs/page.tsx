@@ -80,8 +80,9 @@ export default async function EmployerJobsPage({ searchParams }: EmployerJobsPag
           <ul className="flex flex-col gap-4">
             {jobs.map((job) => {
               const open = isJobOpen(job);
-              // Tin "Đang tuyển" nhưng đã qua hạn nộp: không ai thấy tin, cần nhắc NTD
-              const overdue = job.status === "active" && !open;
+              // Tin đã hết hạn (tác vụ định kỳ đặt "expired"), hoặc "Đang tuyển" mà vừa qua hạn
+              // (tác vụ chạy mỗi giờ nên có thể chưa kịp đổi): không ai thấy tin, cần nhắc NTD gia hạn
+              const overdue = job.status === "expired" || (job.status === "active" && !open);
               return (
                 <li key={job._id} className="flex flex-col gap-4 rounded-xl border bg-card p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -111,7 +112,7 @@ export default async function EmployerJobsPage({ searchParams }: EmployerJobsPag
 
                   {overdue && (
                     <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                      Tin đã qua hạn nộp nên không còn hiện với ứng viên.{" "}
+                      Tin đã hết hạn nộp nên không còn hiện với ứng viên. Gia hạn thì tin tự mở lại.{" "}
                       <Link href={`/employer/jobs/${job._id}/edit`} className="font-semibold underline">
                         Gia hạn
                       </Link>

@@ -28,7 +28,8 @@ const SUITES = [
   { name: 'security', file: 'security.mjs', title: 'Bảo mật (Bước 3)' },
   { name: 'password-withdraw-stats', file: 'password-withdraw-stats.mjs', title: 'Quên MK, rút đơn, thống kê (Bước 4)' },
   { name: 'cookie-auth', file: 'cookie-auth.mjs', title: 'Đăng nhập bằng cookie (Giai đoạn 0)' },
-  { name: 'admin', file: 'admin.mjs', title: 'Khu admin và chống NoSQL injection ở đăng nhập' }
+  { name: 'admin', file: 'admin.mjs', title: 'Khu admin và chống NoSQL injection ở đăng nhập' },
+  { name: 'scheduled-tasks', file: 'scheduled-tasks.mjs', title: 'Tác vụ định kỳ: tin và gói dịch vụ hết hạn' }
 ];
 
 const filter = process.argv[2];

@@ -62,8 +62,8 @@ export default async function EmployerDashboardPage() {
   const { jobs, applications, charts, topJobs } = data;
   // Như trang "Tin tuyển dụng": số đơn không tính đơn ứng viên đã rút
   const received = applications.total - applications.withdrawn;
-  // Tin "Đang tuyển" nhưng đã quá hạn nộp: ứng viên không còn thấy
-  const overdue = jobs.active - jobs.open;
+  // Tin cần gia hạn: đã "Hết hạn", cộng tin "Đang tuyển" vừa qua hạn mà tác vụ định kỳ chưa kịp đổi
+  const overdue = jobs.expired + (jobs.active - jobs.open);
   const series = [
     { label: "Tin đăng mới", unit: "tin", values: charts.datasets.newJobs },
     { label: "Đơn ứng tuyển mới", unit: "đơn", values: charts.datasets.newApplications },
@@ -99,7 +99,7 @@ export default async function EmployerDashboardPage() {
           {overdue > 0 && (
             <li>
               <Link href="/employer/jobs" className="font-semibold text-primary hover:underline">
-                {overdue} tin &quot;Đang tuyển&quot; đã quá hạn nộp
+                {overdue} tin đã hết hạn nộp
               </Link>
               <span className="text-muted-foreground"> (không còn hiện với ứng viên, cần gia hạn)</span>
             </li>

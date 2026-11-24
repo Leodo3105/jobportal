@@ -5,17 +5,25 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
+import mongoose from 'mongoose';
 import connectDB from './config/db.js';
 import { UPLOAD_ROOT, ensureUploadDirs } from './config/paths.js';
 import { allowedOrigins } from './config/origins.js';
 import errorHandler from './middlewares/error.js';
 import checkOrigin from './middlewares/checkOrigin.js';
+import { startScheduler } from './jobs/scheduler.js';
 
 // Load env vars
 dotenv.config();
 
 // Connect to database
 connectDB();
+
+// Tác vụ định kỳ (tin/gói hết hạn): đợi kết nối DB xong mới chạy.
+// Tắt khi test để tác vụ không chen vào giữa các bộ e2e (bộ scheduled-tasks tự gọi npm run tasks).
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connection.once('open', startScheduler);
+}
 
 const app = express();
 
