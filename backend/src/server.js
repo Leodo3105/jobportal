@@ -16,6 +16,16 @@ import { startScheduler } from './jobs/scheduler.js';
 // Load env vars
 dotenv.config();
 
+// Production: JWT_SECRET yếu hoặc thiếu thì dừng ngay, thay vì chạy rồi lỗi 500 khi có người đăng nhập
+// (hoặc tệ hơn: token ký bằng chuỗi mẫu ai cũng biết, ai cũng giả được).
+if (process.env.NODE_ENV === 'production') {
+  const secret = process.env.JWT_SECRET || '';
+  if (secret.length < 32 || secret.startsWith('change_me')) {
+    console.error('JWT_SECRET thiếu, quá ngắn (< 32 ký tự) hoặc vẫn là giá trị mẫu. Dừng server.');
+    process.exit(1);
+  }
+}
+
 // Connect to database
 connectDB();
 
@@ -30,6 +40,15 @@ const app = express();
 if (process.env.TRUST_PROXY) {
   const hops = parseInt(process.env.TRUST_PROXY, 10);
   app.set('trust proxy', Number.isNaN(hops) ? process.env.TRUST_PROXY : hops);
+}
+
+// Log request. Đặt trước rate limit để cả request bị chặn (429) cũng được ghi.
+// Production dùng 'combined': có IP người dùng (req.ip, phụ thuộc TRUST_PROXY), thời gian, user-agent.
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+} else if (process.env.NODE_ENV === 'production') {
+  // Bỏ qua healthcheck của Docker (GET / mỗi 10 giây) cho log khỏi bị lấp
+  app.use(morgan('combined', { skip: (req) => req.path === '/' && req.method === 'GET' }));
 }
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
@@ -65,11 +84,6 @@ const passwordLimiter = rateLimit({
   message: { success: false, error: 'Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút' }
 });
 app.use('/api/auth/password', passwordLimiter);
-
-// Logging middleware in development mode
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-}
 
 // Make sure upload folders and default images exist
 ensureUploadDirs();

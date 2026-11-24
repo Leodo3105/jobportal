@@ -1,0 +1,11 @@
+# Không đưa vào image: thư viện và bản build ở máy, file bí mật, ghi chú
+node_modules
+.next
+.env
+.env.*
+!.env.example
+DESIGN.md
+*.tsbuildinfo
+*.log
+Dockerfile
+.dockerignore

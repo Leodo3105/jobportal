@@ -1,0 +1,11 @@
+# Không đưa vào image: thư viện cài ở máy, file bí mật, dữ liệu upload, test, ghi chú
+node_modules
+.env
+.env.*
+!.env.example
+uploads
+tests
+NOTES.md
+*.log
+Dockerfile
+.dockerignore

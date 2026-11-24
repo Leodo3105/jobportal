@@ -86,6 +86,39 @@ npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"
 
 **Quên mật khẩu khi chạy ở máy:** để `SMTP_HOST` trống trong `.env`, link đặt lại mật khẩu được in ra console của backend thay vì gửi email.
 
+## Chạy bằng Docker
+
+Dựng cả MongoDB, backend, frontend và Caddy (reverse proxy) ở chế độ production bằng một lệnh. Không cần cài Node hay MongoDB, chỉ cần Docker (Docker Desktop trên Windows/macOS).
+
+```bash
+cp .env.example .env          # ở thư mục gốc; Windows: copy .env.example .env
+# sửa .env: đặt JWT_SECRET (≥ 32 ký tự), tạo bằng:
+#   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+docker compose up -d --build
+```
+
+Mở http://localhost:8080. Lần build đầu mất vài phút.
+
+```
+Trình duyệt ─► caddy :8080 ─► frontend (Next.js) ─rewrite /api, /uploads─► backend :5000 ─► mongo
+```
+
+- Chỉ Caddy mở cổng ra ngoài; frontend, backend và MongoDB nằm trong mạng nội bộ của Compose.
+- Dữ liệu nằm trong 2 volume `mongo-data` (database) và `uploads` (avatar, logo, CV), còn nguyên sau khi tắt hay dựng lại container.
+- Tác vụ định kỳ chạy trong container backend.
+
+| Việc | Lệnh |
+|---|---|
+| Dữ liệu demo | `docker compose exec -e NODE_ENV=development backend npm run seed` (seed tự chặn khi production, phải ghi đè rõ ràng) |
+| Tạo admin | `docker compose exec backend npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"` |
+| Xem log | `docker compose logs -f backend` |
+| Dừng (giữ dữ liệu) | `docker compose down` |
+| Dừng và xoá hết dữ liệu | `docker compose down -v` |
+
+**Biến trong `.env` gốc** (xem `.env.example`): `APP_PORT`, `APP_URL` (phải khớp địa chỉ gõ trên trình duyệt, dùng cho chống CSRF và link email), `JWT_SECRET` (bắt buộc; thiếu thì Compose không chạy, yếu thì backend tự dừng), `COOKIE_SECURE=false` (đăng nhập được qua `http://`; bỏ khi có HTTPS), `SMTP_*` (để trống thì chức năng quên mật khẩu báo lỗi, vì production không in link ra log).
+
+**Vì sao có Caddy:** khi rewrite `/api` sang backend, Next.js không tự gắn IP người dùng mà chuyển nguyên header `X-Forwarded-For` client gửi lên, nên kẻ tấn công giả header là né được rate limit đăng nhập. Caddy bỏ header giả và đặt IP thật. Khi deploy lên VPS có tên miền, đổi `:80` trong `Caddyfile` thành tên miền là Caddy tự cấp HTTPS.
+
 ### Biến môi trường (`backend/.env`)
 
 | Biến | Ý nghĩa |
@@ -95,7 +128,8 @@ npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"
 | `CLIENT_URL` | Origin của frontend (nhiều giá trị cách nhau bằng dấu phẩy), dùng cho CORS, chống CSRF và link trong email |
 | `TRUST_PROXY` | Số proxy đứng trước API (ví dụ `1` sau Nginx). Để trống khi không có proxy |
 | `MONGO_URI` | Chuỗi kết nối MongoDB |
-| `JWT_SECRET`, `JWT_EXPIRE`, `JWT_COOKIE_DAYS` | Khoá ký JWT, hạn token, số ngày sống của cookie |
+| `JWT_SECRET`, `JWT_EXPIRE`, `JWT_COOKIE_DAYS` | Khoá ký JWT (production: ≥ 32 ký tự, không thì server không chạy), hạn token, số ngày sống của cookie |
+| `COOKIE_SECURE` | `false` để bỏ cờ `Secure` của cookie khi chạy production qua `http://`; để trống thì tự bật khi production |
 | `SMTP_*`, `FROM_NAME`, `FROM_EMAIL` | Cấu hình gửi email |
 
 Frontend chỉ có `API_URL` (mặc định `http://localhost:5000`), xem `frontend/.env.example`.
@@ -115,7 +149,10 @@ Mỗi bộ tự khởi động một server riêng với cổng riêng và datab
 ## Cấu trúc thư mục
 
 ```
+docker-compose.yml       MongoDB + backend + frontend + Caddy
+Caddyfile                reverse proxy, cổng vào duy nhất
 backend/
+  Dockerfile
   src/
     server.js            khởi tạo Express, middleware bảo mật, gắn route
     config/              kết nối DB, đường dẫn upload, danh sách origin
@@ -128,6 +165,7 @@ backend/
   scripts/               createAdmin.js, seed.js, runScheduledTasks.js
   tests/                 run-all.mjs + e2e/*.mjs
 frontend/
+  Dockerfile             build 3 giai đoạn, chạy bản standalone của Next.js
   src/
     app/                 mỗi thư mục là một route (jobseeker/, employer/, admin/ là các khu riêng)
     components/          ui/ (shadcn), layout/, và component theo từng khu
@@ -156,6 +194,6 @@ Mọi API có tiền tố `/api`. Ký hiệu: 🔓 công khai, 🔑 cần đăng
 
 ## Hướng phát triển
 
-- Docker Compose (MongoDB + backend + frontend) và cấu hình deploy.
+- Deploy lên VPS: tên miền, HTTPS (Caddy đã sẵn), sao lưu volume.
 - Thanh toán gói dịch vụ qua VNPay; tìm ứng viên cho gói trả phí.
 - Giao diện tin nhắn, cập nhật realtime bằng socket.io.

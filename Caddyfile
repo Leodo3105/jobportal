@@ -1,0 +1,17 @@
+# Caddy: cổng vào duy nhất của JobPortal khi chạy bằng docker-compose.
+#
+# Vì sao cần: Next.js khi rewrite /api sang backend KHÔNG tự thêm IP người dùng vào X-Forwarded-For,
+# mà chuyển nguyên header client gửi lên (giả được). Caddy bỏ header X-Forwarded-For từ client
+# (client không nằm trong trusted_proxies) và tự đặt IP thật, Next chuyển tiếp nguyên văn,
+# nên backend (TRUST_PROXY=1) lấy đúng IP để rate limit.
+#
+# Khi deploy lên VPS có tên miền: thay ":80" bằng tên miền (ví dụ jobportal.example.com),
+# bỏ "auto_https off", mở cổng 80 và 443. Caddy tự xin và gia hạn chứng chỉ HTTPS.
+{
+	auto_https off
+}
+
+:80 {
+	encode gzip
+	reverse_proxy frontend:3000
+}

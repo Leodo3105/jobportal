@@ -1,0 +1,82 @@
+# Chạy cả JobPortal (MongoDB + backend + frontend) ở chế độ production bằng một lệnh:
+#   cp .env.example .env        # rồi sửa JWT_SECRET
+#   docker compose up -d --build
+# Mở http://localhost:8080 (đổi bằng APP_PORT/APP_URL trong .env).
+#
+# Trình duyệt ─► caddy (cổng duy nhất mở ra ngoài) ─► frontend (Next.js) ─rewrite /api─► backend ─► mongo
+# Frontend, backend và MongoDB chỉ nằm trong mạng nội bộ của Compose: /api đi qua rewrite của Next.js
+# (cookie first-party), MongoDB không ai bên ngoài kết nối được. Vì sao cần Caddy: xem Caddyfile.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGO_URI: mongodb://mongo:27017/jobportal
+      # Tin 1 proxy đứng ngay trước (Next.js). X-Forwarded-For do Caddy đặt (IP thật), Next chuyển nguyên văn
+      TRUST_PROXY: "1"
+      CLIENT_URL: ${APP_URL:-http://localhost:8080}
+      JWT_SECRET: ${JWT_SECRET:?Cần đặt JWT_SECRET trong file .env ở thư mục gốc (xem .env.example)}
+      JWT_EXPIRE: ${JWT_EXPIRE:-30d}
+      JWT_COOKIE_DAYS: ${JWT_COOKIE_DAYS:-30}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_EMAIL: ${SMTP_EMAIL:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FROM_NAME: ${FROM_NAME:-JobPortal}
+      FROM_EMAIL: ${FROM_EMAIL:-noreply@example.com}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        API_URL: http://backend:5000
+    restart: unless-stopped
+    environment:
+      API_URL: http://backend:5000
+    # Không mở cổng: mọi request phải đi qua Caddy (nếu vào thẳng frontend thì giả được X-Forwarded-For)
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data # chứng chỉ HTTPS khi deploy có tên miền
+    depends_on:
+      - frontend
+
+volumes:
+  mongo-data: # database
+  uploads:    # avatar, logo, CV
+  caddy-data:
