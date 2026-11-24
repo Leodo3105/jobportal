@@ -3,5 +3,7 @@ node_modules
 .DS_Store
 coverage
 .vscode
-uploads
+# File người dùng tải lên. Có "/" ở đầu: chỉ khớp backend/uploads/.
+# Không có "/" thì khớp mọi thư mục tên uploads, kể cả code ở src/middlewares/uploads/.
+/uploads
 tests/.logs
