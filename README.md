@@ -1,5 +1,7 @@
 # JobPortal
 
+[![CI](https://github.com/Leodo3105/jobportal/actions/workflows/ci.yml/badge.svg)](https://github.com/Leodo3105/jobportal/actions/workflows/ci.yml)
+
 Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp hồ sơ, **nhà tuyển dụng** đăng tin và xử lý đơn, **quản trị viên** quản lý người dùng, tin, công ty và danh mục.
 
 - **Backend:** Node.js, Express 4, MongoDB (Mongoose 8), JWT trong cookie httpOnly, multer, nodemailer.
@@ -137,6 +139,8 @@ Frontend chỉ có `API_URL` (mặc định `http://localhost:5000`), xem `front
 ## Test
 
 Backend có 7 bộ test end-to-end gọi API thật (khoảng 420 kiểm tra), gồm một bộ smoke gọi gần 90 endpoint với đúng vai trò và báo lỗi nếu có bất kỳ response 500 nào.
+
+**CI (GitHub Actions, `.github/workflows/ci.yml`):** mỗi lần push lên `main` hoặc mở pull request, chạy song song 3 việc trên bản checkout sạch: cả 7 bộ e2e (với MongoDB), lint + type-check + build frontend, và build Docker rồi dựng thử cả stack qua Caddy.
 
 ```bash
 cd backend

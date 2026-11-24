@@ -1,0 +1,121 @@
+# CI: chạy trên bản checkout sạch của đúng commit vừa push, nên bắt được cả lỗi "ở máy chạy được
+# nhưng thiếu file trên repo". 3 job chạy song song; xem kết quả ở tab Actions của repo.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: # nút "Run workflow" để chạy tay
+
+# Workflow chỉ được đọc repo, không ghi được gì
+permissions:
+  contents: read
+
+# Push liên tiếp lên cùng một nhánh thì huỷ lượt cũ đang chạy
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # Runner e2e cần MongoDB ở 127.0.0.1:27017; GitHub đợi healthcheck xong mới chạy các bước
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - name: Chạy mọi bộ e2e
+        run: npm run test:e2e
+      # Lỗi thì tải log server của từng bộ test về xem (ở trang kết quả, mục Artifacts)
+      - name: Lưu log server khi lỗi
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-server-logs
+          path: backend/tests/.logs/
+          retention-days: 7
+
+  frontend:
+    name: Frontend lint, type-check, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - name: Type-check
+        run: npx tsc --noEmit
+      # Mọi trang đều render động nên build không cần backend
+      - name: Build production
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  docker:
+    name: Docker build và dựng thử
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      # Stack tạm, xong là xoá: tạo secret ngẫu nhiên tại chỗ, không cần GitHub Secret
+      - name: Tạo JWT_SECRET tạm
+        run: echo "JWT_SECRET=$(openssl rand -hex 48)" >> "$GITHUB_ENV"
+      - name: Build image
+        run: docker compose build
+      - name: Dựng stack (đợi mongo, backend healthy)
+        run: docker compose up -d --wait
+      - name: Kiểm tra qua Caddy (cổng 8080)
+        run: |
+          # Trả mã HTTP của một đường dẫn, thử lại tới 30 lần (frontend cần vài giây để sẵn sàng)
+          status_of() {
+            for _ in $(seq 1 30); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$1" || true)
+              if [ "$code" = "$2" ]; then echo "$code"; return 0; fi
+              sleep 2
+            done
+            echo "$code"; return 1
+          }
+          check() {
+            if code=$(status_of "$1" "$2"); then
+              echo "OK   $1 -> $code"
+            else
+              echo "FAIL $1 -> $code (mong $2)"; exit 1
+            fi
+          }
+          check / 200                  # Next.js SSR chạy, gọi được backend
+          check /api/jobs 200          # rewrite /api qua Next sang backend
+          check /uploads/cv/x.pdf 404  # CV không phục vụ tĩnh
+      - name: Log các container khi lỗi
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Dọn stack
+        if: always()
+        run: docker compose down -v
