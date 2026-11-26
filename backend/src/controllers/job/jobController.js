@@ -8,6 +8,9 @@ import Company from '../../models/employer/Company.js';
 import escapeRegex from '../../utils/escapeRegex.js';
 import queryString from '../../utils/queryString.js';
 import { checkJob } from '../../utils/employerValidation.js';
+import { paging, pageInfo } from '../../utils/pagination.js';
+
+const EMPLOYER_JOBS_PAGE_SIZE = 10;
 
 // Fields an employer may set when creating/updating a job.
 // Anything else (featured, views, user, company, status...) is ignored.
@@ -343,29 +346,46 @@ export const deleteJob = async (req, res) => {
   }
 };
 
-// Get jobs by employer
+// Gắn số đơn vào từng tin: applicationCount (không tính đơn đã rút), pendingCount (đơn NTD chưa mở).
+// Đếm theo (tin, trạng thái) trong một lần truy vấn. `jobs` là object thường (.lean()).
+const attachApplicationCounts = async (jobs) => {
+  const counts = await Application.aggregate([
+    { $match: { job: { $in: jobs.map((job) => job._id) } } },
+    { $group: { _id: { job: '$job', status: '$status' }, n: { $sum: 1 } } }
+  ]);
+
+  for (const job of jobs) {
+    const mine = counts.filter((c) => c._id.job.equals(job._id));
+    job.applicationCount = mine.filter((c) => c._id.status !== 'withdrawn').reduce((sum, c) => sum + c.n, 0);
+    job.pendingCount = mine.find((c) => c._id.status === 'pending')?.n ?? 0;
+  }
+};
+
+// GET /api/jobs/employer/myjobs?page=&limit=  tin của NTD (mọi trạng thái), mới nhất trước
 export const getEmployerJobs = async (req, res) => {
   try {
-    const jobs = await Job.find({ user: req.user.id })
-      .sort({ createdAt: -1 })
-      .lean(); // object JS thường, để gắn thêm field đếm đơn
+    const { limit, skip } = paging(req.query, EMPLOYER_JOBS_PAGE_SIZE);
+    const filter = { user: req.user.id };
 
-    // Đếm đơn của các tin này theo (tin, trạng thái) trong một lần truy vấn
-    const counts = await Application.aggregate([
-      { $match: { job: { $in: jobs.map((job) => job._id) } } },
-      { $group: { _id: { job: '$job', status: '$status' }, n: { $sum: 1 } } }
+    const [jobs, total, allJobIds] = await Promise.all([
+      Job.find(filter)
+        // _id làm tiêu chí phụ: createdAt có thể trùng, sort không duy nhất làm phân trang lặp/sót
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(), // object JS thường, để gắn thêm field đếm đơn
+      Job.countDocuments(filter),
+      Job.find(filter).distinct('_id')
     ]);
 
-    for (const job of jobs) {
-      const mine = counts.filter((c) => c._id.job.equals(job._id));
-      const by = (status) => mine.find((c) => c._id.status === status)?.n ?? 0;
-      job.applicationCount = mine.filter((c) => c._id.status !== 'withdrawn').reduce((sum, c) => sum + c.n, 0);
-      job.pendingCount = by('pending'); // đơn NTD chưa mở
-    }
+    await attachApplicationCounts(jobs);
+    // Đơn chưa xem của MỌI tin (không chỉ trang này), cho dòng "N tin, M đơn chưa xem"
+    const pendingTotal = await Application.countDocuments({ job: { $in: allJobIds }, status: 'pending' });
 
     res.status(200).json({
       success: true,
-      count: jobs.length,
+      ...pageInfo(jobs.length, total, limit),
+      pendingTotal,
       data: jobs
     });
   } catch (error) {
@@ -374,6 +394,23 @@ export const getEmployerJobs = async (req, res) => {
       success: false,
       error: 'Server Error'
     });
+  }
+};
+
+// GET /api/jobs/employer/myjobs/:id  một tin của chính NTD, mọi trạng thái (kể cả nháp).
+// Khác GET /api/jobs/:id: không tăng lượt xem, không 404 với tin nháp. Tin của người khác: 404.
+export const getEmployerJob = async (req, res) => {
+  try {
+    const job = await Job.findOne({ _id: req.params.id, user: req.user.id }).lean();
+    if (!job) {
+      return res.status(404).json({ success: false, error: 'Không tìm thấy tin tuyển dụng' });
+    }
+
+    await attachApplicationCounts([job]);
+    res.status(200).json({ success: true, data: job });
+  } catch (error) {
+    console.error('Get employer job error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
 

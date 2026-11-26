@@ -5,6 +5,13 @@ import JobseekerProfile from '../../models/jobseeker/Profile.js';
 import Notification from '../../models/notification/Notification.js';
 import fs from 'fs';
 import { CV_DIR, resolveUploadFile, removeUploadFile } from '../../config/paths.js';
+import queryString from '../../utils/queryString.js';
+import { paging, pageInfo } from '../../utils/pagination.js';
+
+// Số mục mỗi trang mặc định (FE có thể gửi ?limit=, tối đa 50)
+const MY_APPLICATIONS_PAGE_SIZE = 10;
+const JOB_APPLICATIONS_PAGE_SIZE = 20;
+const APPLICATION_STATUSES = ['pending', 'viewed', 'interview', 'accepted', 'rejected', 'withdrawn'];
 
 // Giới hạn độ dài các nội dung NTD nhập
 const MAX_FEEDBACK = 1000;
@@ -206,21 +213,39 @@ export const getJobApplications = async (req, res) => {
       });
     }
 
-    // Get all applications for the job
-    const applications = await Application.find({ job: jobId })
-      .populate({
-        path: 'user',
-        select: 'name email avatar'
-      })
-      .populate({
-        path: 'profile',
-        select: 'title skills location desiredSalary'
-      })
-      .sort({ createdAt: -1 });
+    // ?status=: lọc theo trạng thái. Không gửi thì lấy mọi đơn trừ đơn đã rút (tab "Tất cả" của FE).
+    const status = queryString(req.query.status);
+    if (req.query.status !== undefined && !APPLICATION_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, error: 'Trạng thái đơn không hợp lệ' });
+    }
+    const filter = { job: job._id, status: status ?? { $ne: 'withdrawn' } };
+    const { limit, skip } = paging(req.query, JOB_APPLICATIONS_PAGE_SIZE);
+
+    const [applications, total, grouped] = await Promise.all([
+      Application.find(filter)
+        .populate({
+          path: 'user',
+          select: 'name email avatar'
+        })
+        .populate({
+          path: 'profile',
+          select: 'title skills location desiredSalary'
+        })
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit),
+      Application.countDocuments(filter),
+      // Số đơn theo từng trạng thái (mọi đơn của tin, không phụ thuộc trang/bộ lọc) cho các tab
+      Application.aggregate([{ $match: { job: job._id } }, { $group: { _id: '$status', n: { $sum: 1 } } }])
+    ]);
+
+    const counts = Object.fromEntries(APPLICATION_STATUSES.map((s) => [s, grouped.find((g) => g._id === s)?.n ?? 0]));
+    counts.all = grouped.filter((g) => g._id !== 'withdrawn').reduce((sum, g) => sum + g.n, 0);
 
     res.status(200).json({
       success: true,
-      count: applications.length,
+      ...pageInfo(applications.length, total, limit),
+      counts,
       data: applications
     });
   } catch (error) {
@@ -566,22 +591,39 @@ export const getApplicationCV = async (req, res) => {
 // Get user's applications
 export const getUserApplications = async (req, res) => {
   try {
-    // For jobseekers - get all applications they've submitted
-    const applications = await Application.find({ user: req.user.id })
-      .select('-notes') // ghi chú nội bộ của NTD
-      .populate({
-        path: 'job',
-        select: 'title company location status applicationDeadline',
-        populate: {
-          path: 'company',
-          select: 'name logo'
-        }
-      })
-      .sort({ createdAt: -1 });
+    const { limit, skip } = paging(req.query, MY_APPLICATIONS_PAGE_SIZE);
+    const filter = { user: req.user.id };
+
+    // ?job=<id>: đơn của ứng viên cho một tin (FE dùng để biết đã ứng tuyển tin đó chưa)
+    const job = queryString(req.query.job);
+    if (req.query.job !== undefined) {
+      if (!job || !mongoose.isValidObjectId(job)) {
+        return res.status(400).json({ success: false, error: 'Mã tin tuyển dụng không hợp lệ' });
+      }
+      filter.job = job;
+    }
+
+    const [applications, total] = await Promise.all([
+      Application.find(filter)
+        .select('-notes') // ghi chú nội bộ của NTD
+        .populate({
+          path: 'job',
+          select: 'title company location status applicationDeadline',
+          populate: {
+            path: 'company',
+            select: 'name logo'
+          }
+        })
+        // _id làm tiêu chí phụ: createdAt có thể trùng, sort không duy nhất làm phân trang lặp/sót
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit),
+      Application.countDocuments(filter)
+    ]);
 
     res.status(200).json({
       success: true,
-      count: applications.length,
+      ...pageInfo(applications.length, total, limit),
       data: applications
     });
   } catch (error) {

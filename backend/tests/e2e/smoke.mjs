@@ -320,6 +320,31 @@ await expect('ghi chú quá dài trả 400', 'PUT', `/api/applications/${appId}/
 await expect('phản hồi quá dài trả 400', 'PUT', `/api/applications/${appId}/status`, 400, { token: E, json: { status: 'interview', feedback: 'a'.repeat(1001) } });
 await expect('tin của NTD có số đơn', 'GET', '/api/jobs/employer/myjobs', 200, { token: E },
   (r) => { const j = r.data.data?.find((x) => x._id === jobId); return (j?.applicationCount >= 1 && typeof j?.pendingCount === 'number') || { ok: false, info: JSON.stringify({ a: j?.applicationCount, p: j?.pendingCount }) }; });
+// --- Phân trang các danh sách (lúc này: E có 2 tin; tin jobId có đơn của J (interview) và J2 (pending)) ---
+await expect('tin của NTD: phân trang, pendingTotal tính mọi tin', 'GET', '/api/jobs/employer/myjobs?limit=1&page=2', 200, { token: E },
+  (r) => (r.data.total === 2 && r.data.totalPages === 2 && r.data.count === 1 && r.data.pendingTotal === 1) || { ok: false, info: JSON.stringify({ t: r.data.total, tp: r.data.totalPages, c: r.data.count, p: r.data.pendingTotal }) });
+await expect('tin của NTD: limit/page sai không 500', 'GET', '/api/jobs/employer/myjobs?limit=abc&page=-1', 200, { token: E }, (r) => r.data.count === 2);
+await expect('một tin của NTD kèm số đơn', 'GET', `/api/jobs/employer/myjobs/${jobId}`, 200, { token: E },
+  (r) => (r.data.data?._id === jobId && r.data.data.applicationCount === 2 && r.data.data.pendingCount === 1) || { ok: false, info: JSON.stringify({ a: r.data.data?.applicationCount, p: r.data.data?.pendingCount }) });
+await expect('một tin của NTD không tăng lượt xem', 'GET', `/api/jobs/employer/myjobs/${jobId}`, 200, { token: E },
+  (r) => r.data.data?.views === viewed.data.data?.views + 1 || { ok: false, info: `views ${r.data.data?.views}` });
+await expect('NTD khác lấy tin không phải của mình trả 404', 'GET', `/api/jobs/employer/myjobs/${jobId}`, 404, { token: E2 });
+await expect('ứng viên không gọi được myjobs/:id', 'GET', `/api/jobs/employer/myjobs/${jobId}`, 403, { token: J });
+await expect('myjobs/:id sai định dạng trả 400', 'GET', '/api/jobs/employer/myjobs/abc', 400, { token: E });
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'draft' } });
+await expect('tin nháp vẫn lấy được qua myjobs/:id', 'GET', `/api/jobs/employer/myjobs/${job2Id}`, 200, { token: E }, (r) => r.data.data?.status === 'draft');
+await api('PUT', `/api/jobs/${job2Id}/status`, { token: E, json: { status: 'closed' } });
+await expect('đơn theo tin: lọc trạng thái, counts tính mọi đơn', 'GET', `/api/applications/job/${jobId}?status=interview`, 200, { token: E },
+  (r) => (r.data.total === 1 && r.data.data[0]?._id === appId && r.data.counts?.all === 2 && r.data.counts.interview === 1 && r.data.counts.pending === 1 && r.data.counts.withdrawn === 0) || { ok: false, info: JSON.stringify({ t: r.data.total, counts: r.data.counts }) });
+await expect('đơn theo tin: phân trang', 'GET', `/api/applications/job/${jobId}?limit=1&page=2`, 200, { token: E },
+  (r) => (r.data.count === 1 && r.data.total === 2 && r.data.totalPages === 2) || { ok: false, info: JSON.stringify({ c: r.data.count, t: r.data.total }) });
+await expect('đơn theo tin: trạng thái sai trả 400', 'GET', `/api/applications/job/${jobId}?status=xyz`, 400, { token: E });
+await expect('đơn theo tin: status là object trả 400', 'GET', `/api/applications/job/${jobId}?status[$ne]=x`, 400, { token: E });
+await expect('đơn của tôi lọc theo tin', 'GET', `/api/applications/user/myapplications?job=${jobId}`, 200, { token: J },
+  (r) => (r.data.total === 1 && r.data.data[0]?._id === appId) || { ok: false, info: `total ${r.data.total}` });
+await expect('đơn của tôi: tin chưa nộp thì rỗng', 'GET', `/api/applications/user/myapplications?job=${job2Id}`, 200, { token: J }, (r) => r.data.total === 0 && r.data.totalPages === 0);
+await expect('đơn của tôi: ?job sai định dạng trả 400', 'GET', '/api/applications/user/myapplications?job=abc', 400, { token: J });
+await expect('đơn của tôi: ?job là object trả 400', 'GET', '/api/applications/user/myapplications?job[$ne]=x', 400, { token: J });
 const intvNoti = (await api('GET', '/api/notifications', { token: J })).data.data?.find((n) => n.type === 'interview_invitation');
 check('Thông báo mời phỏng vấn ghi giờ Việt Nam (09:00Z → 16:00)', Boolean(intvNoti?.message?.includes('16:00 10/01/2030')), intvNoti?.message);
 

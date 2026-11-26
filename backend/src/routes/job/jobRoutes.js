@@ -6,6 +6,7 @@ import {
   updateJob,
   deleteJob,
   getEmployerJobs,
+  getEmployerJob,
   changeJobStatus,
   getSimilarJobs
 } from '../../controllers/job/jobController.js';
@@ -32,6 +33,7 @@ router.get('/:id/similar', getSimilarJobs);
 
 // Get employer's jobs
 router.get('/employer/myjobs', protect, authorize('employer'), getEmployerJobs);
+router.get('/employer/myjobs/:id', protect, authorize('employer'), getEmployerJob);
 
 // Change job status
 router.put('/:id/status', protect, authorize('employer', 'admin'), changeJobStatus);
