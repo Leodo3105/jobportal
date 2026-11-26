@@ -84,6 +84,8 @@ const passwordLimiter = rateLimit({
   message: { success: false, error: 'Quá nhiều yêu cầu, vui lòng thử lại sau 15 phút' }
 });
 app.use('/api/auth/password', passwordLimiter);
+// Tự xoá tài khoản cũng kiểm tra mật khẩu: dùng chung bộ đếm. Chỉ DELETE (GET/PUT /api/auth/me không bị tính).
+app.delete('/api/auth/me', passwordLimiter);
 
 // Make sure upload folders and default images exist
 ensureUploadDirs();

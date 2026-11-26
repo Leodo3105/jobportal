@@ -1,8 +1,6 @@
 import JobseekerProfile from '../../models/jobseeker/Profile.js';
 import User from '../../models/User.js';
 import fs from 'fs';
-import { clearAuthCookie } from '../../utils/authCookie.js';
-import { deleteUserAccount } from '../../utils/deleteUserAccount.js';
 import { LIMITS, checkPeriod, checkSkills, checkText, checkUrl } from '../../utils/profileValidation.js';
 import {
   AVATAR_DIR,
@@ -328,36 +326,6 @@ export const getProfileById = async (req, res) => {
   }
 };
 
-// Delete profile and user (with all related data and files)
-export const deleteProfile = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy tài khoản'
-      });
-    }
-
-    await deleteUserAccount(user);
-
-    // Log the browser out
-    clearAuthCookie(res);
-
-    res.status(200).json({
-      success: true,
-      message: 'Đã xóa tài khoản'
-    });
-  } catch (error) {
-    console.error('Delete profile error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Server Error'
-    });
-  }
-};
 
 // Upload user avatar
 export const uploadAvatar = async (req, res) => {

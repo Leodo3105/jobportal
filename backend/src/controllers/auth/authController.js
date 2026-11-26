@@ -4,6 +4,7 @@ import validatePassword from '../../utils/validatePassword.js';
 import sendEmail from '../../utils/sendEmail.js';
 import { setAuthCookie, clearAuthCookie } from '../../utils/authCookie.js';
 import { primaryClientUrl } from '../../config/origins.js';
+import { deleteUserAccount } from '../../utils/deleteUserAccount.js';
 
 const RESET_TOKEN_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -394,6 +395,39 @@ export const resetPassword = async (req, res) => {
       success: false,
       error: 'Server Error'
     });
+  }
+};
+
+// DELETE /api/auth/me  body { password }
+// Người dùng tự xoá tài khoản kèm toàn bộ dữ liệu (deleteUserAccount, dùng chung với admin xoá).
+// Phải nhập đúng mật khẩu: token bị lộ hoặc máy để quên đăng nhập thì cũng không xoá được.
+// Admin không tự xoá được (có thể không còn admin nào), giống API admin không cho xoá tài khoản admin.
+// Rate limit dùng chung với đổi mật khẩu (passwordLimiter trong server.js): chống dò mật khẩu.
+export const deleteMe = async (req, res) => {
+  try {
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ success: false, error: 'Tài khoản quản trị không tự xoá được' });
+    }
+
+    const { password } = req.body ?? {};
+    // Kiểm tra là chuỗi: body JSON có thể gửi object như { "$ne": null }
+    if (typeof password !== 'string' || !password) {
+      return res.status(400).json({ success: false, error: 'Vui lòng nhập mật khẩu để xác nhận' });
+    }
+
+    // password có select: false nên phải lấy riêng
+    const user = await User.findById(req.user.id).select('+password');
+    if (!(await user.matchPassword(password))) {
+      return res.status(400).json({ success: false, error: 'Mật khẩu không đúng' });
+    }
+
+    await deleteUserAccount(user);
+    clearAuthCookie(res); // đăng xuất trình duyệt đang dùng
+
+    res.status(200).json({ success: true, message: 'Đã xoá tài khoản' });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
 

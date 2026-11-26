@@ -4,6 +4,7 @@ import {
   login,
   getMe,
   updateMe,
+  deleteMe,
   changePassword,
   logout,
   forgotPassword,
@@ -17,6 +18,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/me', protect, getMe);
 router.put('/me', protect, updateMe);
+router.delete('/me', protect, deleteMe); // tự xoá tài khoản, body { password }; rate limit ở server.js
 router.put('/password', protect, changePassword);
 router.post('/logout', logout);
 router.get('/logout', logout); // kept for backward compatibility

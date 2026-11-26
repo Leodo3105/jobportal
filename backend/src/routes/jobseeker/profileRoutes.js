@@ -10,7 +10,6 @@ import {
   deleteExperience,
   getAllProfiles,
   getProfileById,
-  deleteProfile,
   uploadAvatar,
   resetAvatar,
   getAvatar
@@ -30,8 +29,8 @@ router.param('exp_id', validateObjectId);
 router.route('/')
   .get(protect, getCurrentProfile)
   .post(protect, authorize('jobseeker'), createOrUpdateProfile)
-  .put(protect, authorize('jobseeker'), createOrUpdateProfile)
-  .delete(protect, deleteProfile);
+  .put(protect, authorize('jobseeker'), createOrUpdateProfile);
+// Xoá tài khoản: DELETE /api/auth/me (bắt nhập mật khẩu). DELETE /api/profiles cũ đã bỏ.
 
 // Candidate profiles: only for logged-in employers/admins (owner may view their own)
 router.get('/all', protect, authorize('employer', 'admin'), getAllProfiles);

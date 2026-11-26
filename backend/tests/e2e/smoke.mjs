@@ -429,8 +429,18 @@ await expect('xoá ngành đang có tin dùng bị chặn', 'DELETE', `/api/cate
 const unusedCat = (await api('POST', '/api/categories', { token: A, json: { name: 'Ngành tạm', type: 'industry' } })).data.data?._id;
 await expect('xoá ngành không ai dùng', 'DELETE', `/api/categories/${unusedCat}`, 200, { token: A });
 await expect('NTD xoá tin', 'DELETE', `/api/jobs/${job2Id}`, 200, { token: E });
-await expect('xoá tài khoản ứng viên', 'DELETE', '/api/profiles', 200, { token: J2 });
+// Tự xoá tài khoản: DELETE /api/auth/me, bắt nhập mật khẩu. API cũ DELETE /api/profiles đã bỏ.
+await expect('API xoá tài khoản cũ đã bỏ', 'DELETE', '/api/profiles', 404, { token: J2 });
+await expect('xoá tài khoản thiếu mật khẩu trả 400', 'DELETE', '/api/auth/me', 400, { token: J2 });
+await expect('xoá tài khoản mật khẩu là object trả 400', 'DELETE', '/api/auth/me', 400, { token: J2, json: { password: { $ne: null } } });
+await expect('xoá tài khoản sai mật khẩu trả 400', 'DELETE', '/api/auth/me', 400, { token: J2, json: { password: 'Wrong123!' } },
+  (r) => r.data.error === 'Mật khẩu không đúng' || { ok: false, info: r.data.error });
+await expect('sai mật khẩu thì tài khoản còn nguyên', 'GET', '/api/auth/me', 200, { token: J2 });
+await expect('admin không tự xoá được', 'DELETE', '/api/auth/me', 403, { token: A, json: { password: P } });
+await expect('chưa đăng nhập không xoá được', 'DELETE', '/api/auth/me', 401, { json: { password: P } });
+await expect('xoá tài khoản ứng viên', 'DELETE', '/api/auth/me', 200, { token: J2, json: { password: P } });
 await expect('token cũ hết hiệu lực', 'GET', '/api/auth/me', 401, { token: J2 });
+await expect('tài khoản đã xoá không đăng nhập được', 'POST', '/api/auth/login', 401, { json: { email: 'js2@t.io', password: P } });
 
 // ===================== Probes for suspected issues =====================
 group = 'Nghi vấn (kỳ vọng hành vi đúng)';

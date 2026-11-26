@@ -9,7 +9,7 @@ import Message from '../models/chat/Message.js';
 import { AVATAR_DIR, LOGO_DIR, CV_DIR, removeUploadFile } from '../config/paths.js';
 
 // Xoá một tài khoản kèm toàn bộ dữ liệu và file liên quan.
-// Dùng chung cho người dùng tự xoá (DELETE /api/profiles) và admin xoá (DELETE /api/admin/users/:id).
+// Dùng chung cho người dùng tự xoá (DELETE /api/auth/me) và admin xoá (DELETE /api/admin/users/:id).
 // Trả về số lượng đã xoá để báo lại cho admin.
 export const deleteUserAccount = async (user) => {
   const userId = user._id;

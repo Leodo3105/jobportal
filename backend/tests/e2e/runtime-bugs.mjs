@@ -123,7 +123,7 @@ await mongoose.connect(MONGO);
 const db = mongoose.connection.db;
 const empUser = await db.collection('users').findOne({ email: 'emp@t.io' });
 const empCompany = await db.collection('companies').findOne({ user: empUser._id });
-const del = await api('DELETE', '/api/profiles', { token: E });
+const del = await api('DELETE', '/api/auth/me', { token: E, json: { password: P } });
 const left = {
   user: await db.collection('users').countDocuments({ _id: empUser._id }),
   company: await db.collection('companies').countDocuments({ user: empUser._id }),
@@ -141,7 +141,7 @@ const after = await api('GET', '/api/auth/me', { token: E });
 check('Token của tài khoản đã xoá trả 401', after.status === 401, `status ${after.status}`);
 
 const seeker = await db.collection('users').findOne({ email: 'seeker@t.io' });
-const delJ = await api('DELETE', '/api/profiles', { token: J });
+const delJ = await api('DELETE', '/api/auth/me', { token: J, json: { password: P } });
 const leftJ = {
   user: await db.collection('users').countDocuments({ _id: seeker._id }),
   profile: await db.collection('jobseekerprofiles').countDocuments({ user: seeker._id }),

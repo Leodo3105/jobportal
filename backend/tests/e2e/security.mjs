@@ -131,6 +131,15 @@ check('Đăng nhập quá nhiều lần bị 429', lastStatus === 429, `status $
 const meStill = await api('GET', '/api/auth/me', { token: J });
 check('Các API khác không bị rate limit', meStill.status === 200);
 
+// Dò mật khẩu qua API tự xoá tài khoản: bộ đếm riêng (passwordLimiter, 10 lần/15 phút, chung với đổi mật khẩu)
+let deleteStatus = 0;
+for (let i = 0; i < 15 && deleteStatus !== 429; i++) {
+  deleteStatus = (await api('DELETE', '/api/auth/me', { token: J, json: { password: `Wrong${i}!` } })).status;
+}
+check('Xoá tài khoản sai mật khẩu quá nhiều lần bị 429', deleteStatus === 429, `status ${deleteStatus}`);
+const meAfterDelete = await api('GET', '/api/auth/me', { token: J });
+check('GET/PUT /api/auth/me không bị tính vào bộ đếm xoá tài khoản, tài khoản còn nguyên', meAfterDelete.status === 200, `status ${meAfterDelete.status}`);
+
 await mongoose.connect(MONGO);
 await mongoose.connection.dropDatabase();
 await mongoose.disconnect();

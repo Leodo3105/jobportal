@@ -120,7 +120,7 @@ const link = fs.readFileSync(SERVER_LOG, 'utf8').match(/js@t\.io: (\S+)/)?.[1];
 check('Link đặt lại mật khẩu trỏ về FE localhost:3000', link?.startsWith('http://localhost:3000/reset-password?token='), link?.slice(0, 45));
 
 // --- deleting the account clears the cookie
-const del = await b2('DELETE', '/api/profiles');
+const del = await b2('DELETE', '/api/auth/me', { password: 'N3wPassw0rd!' });
 check('Xoá tài khoản thì cookie bị xoá', del.status === 200 && !jar2.has('token'), `status ${del.status}`);
 
 // --- CORS with credentials
