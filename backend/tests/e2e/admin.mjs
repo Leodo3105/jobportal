@@ -166,10 +166,20 @@ check('Gói premium: công ty và mọi tin thành nổi bật', premium.status 
   `${premium.status} jobs=${jobsAfterPremium.map((j) => j.featured).join(',')}`);
 const publicCompany = await api('GET', `/api/companies/${companyId}`);
 check('API công khai vẫn không lộ gói dịch vụ', publicCompany.data.data?.featured === true && !('subscription' in publicCompany.data.data));
+// Tin đăng SAU khi lên gói cũng phải nổi bật (trước đây createJob không xét gói)
+const premiumJob = await api('POST', '/api/jobs', { token: E, json: { ...jobBody, title: 'Tin đăng khi premium' } });
+check('Gói premium: tin mới đăng cũng nổi bật', premiumJob.status === 201 && premiumJob.data.data?.featured === true,
+  `${premiumJob.status} featured=${premiumJob.data.data?.featured}`);
+// Xoá ngay để không làm lệch các số đếm tin phía sau
+await api('DELETE', `/api/jobs/${premiumJob.data.data?._id}`, { token: E });
 
 const free = await api('PUT', `/api/admin/companies/${companyId}/subscription`, { token: A, json: { type: 'free' } });
 const jobsAfterFree = await mongoose.connection.db.collection('jobs').find({ company: new mongoose.Types.ObjectId(companyId) }).toArray();
 check('Về gói free: bỏ nổi bật công ty và tin', free.status === 200 && free.data.data?.featured === false && jobsAfterFree.every((j) => j.featured === false));
+const freeJob = await api('POST', '/api/jobs', { token: E, json: { ...jobBody, title: 'Tin đăng khi free', featured: true } });
+check('Gói free: tin mới không nổi bật, kể cả khi body gửi featured: true', freeJob.status === 201 && freeJob.data.data?.featured === false,
+  `${freeJob.status} featured=${freeJob.data.data?.featured}`);
+await api('DELETE', `/api/jobs/${freeJob.data.data?._id}`, { token: E });
 const premiumList = await api('GET', '/api/admin/companies?plan=free', { token: A });
 check('Lọc công ty theo gói', premiumList.data.total === 1, `total ${premiumList.data.total}`);
 const subByEmp = await api('PUT', `/api/admin/companies/${companyId}/subscription`, { token: E, json: { type: 'enterprise', endDate: '2030-01-01' } });

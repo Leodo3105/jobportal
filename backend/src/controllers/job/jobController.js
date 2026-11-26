@@ -58,7 +58,10 @@ export const createJob = async (req, res) => {
     const job = await Job.create({
       ...result.value,
       user: req.user.id,
-      company: company._id
+      company: company._id,
+      // Tin đi theo gói của công ty: gói premium/enterprise thì tin nổi bật.
+      // company.featured do admin (setCompanySubscription) và tác vụ hết hạn gói giữ đồng bộ với gói.
+      featured: company.featured === true
     });
 
     res.status(201).json({
