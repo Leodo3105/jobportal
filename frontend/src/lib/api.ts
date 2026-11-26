@@ -15,6 +15,7 @@ import type {
   EmployerApplicationItem,
   EmployerDashboard,
   EmployerJob,
+  EmployerJobListResponse,
   Job,
   JobDetail,
   JobListResponse,
@@ -22,6 +23,7 @@ import type {
   MyApplication,
   MyCompany,
   NotificationListResponse,
+  PagedList,
   PublicCompany,
   SavedJobListResponse,
 } from "@/types/api";
@@ -157,16 +159,22 @@ export async function getMyProfile(): Promise<JobseekerProfile | null> {
   return getWithCookie<JobseekerProfile>("/api/profiles");
 }
 
-// Đơn của ứng viên đang đăng nhập cho một tin (kể cả đơn đã rút). Chưa nộp thì null.
-// Backend chưa có API lấy đơn theo tin, nên tạm lấy cả danh sách rồi tìm.
+// Đơn của ứng viên đang đăng nhập cho một tin (kể cả đơn đã rút). Chưa nộp (hoặc lỗi) thì null.
+// Lọc ở backend bằng ?job=, không lấy cả danh sách (danh sách đã phân trang).
 export async function getMyApplicationForJob(jobId: string): Promise<MyApplication | null> {
-  const applications = await getMyApplications();
-  return applications?.find((application) => application.job?._id === jobId) ?? null;
+  const applications = await getWithCookie<MyApplication[]>(
+    `/api/applications/user/myapplications?job=${encodeURIComponent(jobId)}&limit=1`
+  );
+  return applications?.[0] ?? null;
 }
 
-// Mọi đơn của ứng viên đang đăng nhập, mới nhất trước. null khi không lấy được (backend tắt, hết phiên).
-export async function getMyApplications(): Promise<MyApplication[] | null> {
-  return getWithCookie<MyApplication[]>("/api/applications/user/myapplications");
+export const MY_APPLICATIONS_PER_PAGE = 10;
+
+// Đơn của ứng viên đang đăng nhập, mới nhất trước, phân trang. null khi không lấy được (backend tắt, hết phiên).
+export async function getMyApplications(page = 1): Promise<PagedList<MyApplication> | null> {
+  return getBodyWithCookie<PagedList<MyApplication>>(
+    `/api/applications/user/myapplications?page=${page}&limit=${MY_APPLICATIONS_PER_PAGE}`
+  );
 }
 
 // Một đơn của ứng viên đang đăng nhập. Id sai (400), đơn của người khác (403), không có (404) đều trả null.
@@ -212,8 +220,29 @@ export async function getMyCompany(): Promise<MyCompany | null> {
   return getWithCookie<MyCompany>("/api/companies");
 }
 
-export async function getMyJobs(): Promise<EmployerJob[] | null> {
-  return getWithCookie<EmployerJob[]>("/api/jobs/employer/myjobs");
+export const MY_JOBS_PER_PAGE = 10;
+
+// Tin của NTD đang đăng nhập (mọi trạng thái), mới nhất trước, phân trang. null khi lỗi hoặc hết phiên.
+export async function getMyJobs(page = 1): Promise<EmployerJobListResponse | null> {
+  return getBodyWithCookie<EmployerJobListResponse>(`/api/jobs/employer/myjobs?page=${page}&limit=${MY_JOBS_PER_PAGE}`);
+}
+
+// Một tin của NTD (mọi trạng thái, kể cả nháp), kèm số đơn. Không tăng lượt xem như GET /api/jobs/:id.
+// Tin của người khác, không tồn tại (404) hoặc id sai (400) thì "notFound"; lỗi khác (backend tắt...) thì null.
+export async function getMyJob(id: string): Promise<EmployerJob | "notFound" | null> {
+  const token = (await cookies()).get("token")?.value;
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/jobs/employer/myjobs/${encodeURIComponent(id)}`, {
+      headers: { Cookie: `token=${token}` },
+      cache: "no-store",
+    });
+    if (res.status === 400 || res.status === 404) return "notFound";
+    if (!res.ok) return null;
+    return ((await res.json()) as { data: EmployerJob }).data;
+  } catch {
+    return null;
+  }
 }
 
 // Đơn của một tin. Tin không phải của mình (403) hoặc không có (404) thì null.

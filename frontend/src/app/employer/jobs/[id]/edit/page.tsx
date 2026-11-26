@@ -5,17 +5,15 @@ import { ChevronLeft } from "lucide-react";
 
 import { JobForm } from "@/components/employer/job-form";
 import { ErrorNotice } from "@/components/error-notice";
-import { getCategories, getMyJobs } from "@/lib/api";
+import { getCategories, getMyJob } from "@/lib/api";
 
 export const metadata: Metadata = { title: "Sửa tin tuyển dụng" };
 
 export default async function EditJobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Lấy từ danh sách tin của mình (đủ mọi field), không gọi GET /api/jobs/:id
-  // vì API đó tăng lượt xem và trả 404 với tin nháp
-  const [jobs, categories] = await Promise.all([getMyJobs(), getCategories().catch(() => [])]);
-  const job = jobs?.find((item) => item._id === id);
-  if (jobs && !job) notFound();
+  // Dùng API tin của NTD, không gọi GET /api/jobs/:id vì API đó tăng lượt xem và trả 404 với tin nháp
+  const [job, categories] = await Promise.all([getMyJob(id), getCategories().catch(() => [])]);
+  if (job === "notFound") notFound(); // không phải tin của mình, không tồn tại, hoặc id sai
 
   return (
     <div className="max-w-3xl">
@@ -32,7 +30,7 @@ export default async function EditJobPage({ params }: { params: Promise<{ id: st
         {job ? (
           <JobForm job={job} categories={categories.map((c) => c.name)} />
         ) : (
-          <ErrorNotice error={new Error("GET /api/jobs/employer/myjobs thất bại")} title="Không tải được tin tuyển dụng" />
+          <ErrorNotice error={new Error(`GET /api/jobs/employer/myjobs/${id} thất bại`)} title="Không tải được tin tuyển dụng" />
         )}
       </div>
     </div>

@@ -53,7 +53,16 @@ export interface SavedJobListResponse {
   data: SavedJobItem[];
 }
 
-export type EducationLevel = "high-school" | "associate" | "bachelor" | "master" | "phd" | "any";
+// Dạng chung của API danh sách có phân trang: count (số mục trang này), total (tổng), totalPages
+export interface PagedList<T> {
+  success: boolean;
+  count: number;
+  total: number;
+  totalPages: number;
+  data: T[];
+}
+
+export type EducationLevel ="high-school" | "associate" | "bachelor" | "master" | "phd" | "any";
 
 export type CompanySize = "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1000+";
 
@@ -217,6 +226,17 @@ export interface EmployerJob {
   pendingCount: number; // đơn NTD chưa mở
 }
 
+// GET /api/jobs/employer/myjobs: thêm pendingTotal = đơn chưa xem của MỌI tin (không chỉ trang này)
+export interface EmployerJobListResponse extends PagedList<EmployerJob> {
+  pendingTotal: number;
+}
+
+// GET /api/applications/job/:jobId: thêm số đơn theo từng trạng thái của mọi đơn trong tin (cho các tab).
+// `all` không tính đơn đã rút.
+export interface EmployerApplicationListResponse extends PagedList<EmployerApplicationItem> {
+  counts: Record<ApplicationStatus | "all", number>;
+}
+
 // Một phần tử của GET /api/applications/job/:jobId
 export interface EmployerApplicationItem {
   _id: string;
@@ -262,13 +282,7 @@ export interface EmployerApplicationDetail {
 
 export type SubscriptionPlan = "free" | "basic" | "premium" | "enterprise";
 
-export interface AdminList<T> {
-  success: boolean;
-  count: number;
-  total: number;
-  totalPages: number;
-  data: T[];
-}
+export type AdminList<T> = PagedList<T>;
 
 export interface AdminUser {
   _id: string;

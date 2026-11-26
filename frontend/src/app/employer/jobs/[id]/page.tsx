@@ -6,7 +6,7 @@ import { ChevronLeft, MapPin } from "lucide-react";
 import { ErrorNotice } from "@/components/error-notice";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
-import { getJobApplications, getMyJobs } from "@/lib/api";
+import { getJobApplications, getMyJob } from "@/lib/api";
 import {
   APPLICATION_STATUS_LABELS,
   APPLICATION_STATUS_VARIANT,
@@ -38,11 +38,10 @@ export default async function JobApplicationsPage({ params, searchParams }: JobA
   const { status: statusParam } = await searchParams;
   const filter = FILTERS.find((f) => f.value === statusParam)?.value ?? "all";
 
-  // Lấy thông tin tin từ danh sách tin của mình, không gọi GET /api/jobs/:id
-  // (API đó tăng lượt xem và trả 404 cho tin nháp)
-  const [jobs, applications] = await Promise.all([getMyJobs(), getJobApplications(id)]);
-  const job = jobs?.find((item) => item._id === id);
-  if (jobs && !job) notFound(); // không phải tin của mình hoặc không tồn tại
+  // Dùng API tin của NTD, không gọi GET /api/jobs/:id (API đó tăng lượt xem và trả 404 cho tin nháp)
+  // job null (backend lỗi): trang vẫn hiện với tiêu đề chung
+  const [job, applications] = await Promise.all([getMyJob(id), getJobApplications(id)]);
+  if (job === "notFound") notFound(); // không phải tin của mình, không tồn tại, hoặc id sai
 
   const countOf = (value: (typeof FILTERS)[number]["value"]) =>
     applications?.filter((a) => (value === "all" ? a.status !== "withdrawn" : a.status === value)).length ?? 0;
