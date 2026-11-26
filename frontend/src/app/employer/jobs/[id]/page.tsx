@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, MapPin } from "lucide-react";
 
 import { ErrorNotice } from "@/components/error-notice";
+import { Pagination } from "@/components/jobs/pagination";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/user-avatar";
 import { getJobApplications, getMyJob } from "@/lib/api";
@@ -30,22 +31,35 @@ const FILTERS: { value: "all" | ApplicationStatus; label: string }[] = [
 
 interface JobApplicationsPageProps {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; page?: string }>;
 }
+
+type Filter = (typeof FILTERS)[number]["value"];
 
 export default async function JobApplicationsPage({ params, searchParams }: JobApplicationsPageProps) {
   const { id } = await params;
-  const { status: statusParam } = await searchParams;
+  const { status: statusParam, page: pageParam } = await searchParams;
   const filter = FILTERS.find((f) => f.value === statusParam)?.value ?? "all";
+  const page = Math.max(Number.parseInt(pageParam ?? "1", 10) || 1, 1);
 
-  // Dùng API tin của NTD, không gọi GET /api/jobs/:id (API đó tăng lượt xem và trả 404 cho tin nháp)
+  // Dùng API tin của NTD, không gọi GET /api/jobs/:id (API đó tăng lượt xem và trả 404 cho tin nháp).
+  // Đơn: backend lọc theo trạng thái và phân trang; result.counts đếm mọi đơn của tin (cho các tab).
   // job null (backend lỗi): trang vẫn hiện với tiêu đề chung
-  const [job, applications] = await Promise.all([getMyJob(id), getJobApplications(id)]);
+  const [job, result] = await Promise.all([
+    getMyJob(id),
+    getJobApplications(id, filter === "all" ? undefined : filter, page),
+  ]);
   if (job === "notFound") notFound(); // không phải tin của mình, không tồn tại, hoặc id sai
 
-  const countOf = (value: (typeof FILTERS)[number]["value"]) =>
-    applications?.filter((a) => (value === "all" ? a.status !== "withdrawn" : a.status === value)).length ?? 0;
-  const shown = applications?.filter((a) => (filter === "all" ? a.status !== "withdrawn" : a.status === filter)) ?? [];
+  // Bấm tab thì về trang 1 của tab đó
+  const tabHref = (value: Filter) => (value === "all" ? `/employer/jobs/${id}` : `/employer/jobs/${id}?status=${value}`);
+  // Trang vượt quá số trang (vừa xử lý hết đơn ở trang cuối của tab, link cũ): về trang cuối của tab
+  if (result && result.totalPages > 0 && page > result.totalPages) {
+    const query = new URLSearchParams({ page: String(result.totalPages) });
+    if (filter !== "all") query.set("status", filter);
+    redirect(`/employer/jobs/${id}?${query.toString()}`);
+  }
+  const shown = result?.data ?? [];
 
   return (
     <div>
@@ -68,7 +82,7 @@ export default async function JobApplicationsPage({ params, searchParams }: JobA
         </p>
       )}
 
-      {applications === null ? (
+      {result === null ? (
         <div className="mt-6">
           <ErrorNotice error={new Error(`GET /api/applications/job/${id} thất bại`)} title="Không tải được danh sách đơn" />
         </div>
@@ -82,7 +96,7 @@ export default async function JobApplicationsPage({ params, searchParams }: JobA
                 return (
                   <li key={f.value}>
                     <Link
-                      href={f.value === "all" ? `/employer/jobs/${id}` : `/employer/jobs/${id}?status=${f.value}`}
+                      href={tabHref(f.value)}
                       aria-current={active ? "page" : undefined}
                       className={cn(
                         "-mb-px flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
@@ -90,7 +104,7 @@ export default async function JobApplicationsPage({ params, searchParams }: JobA
                       )}
                     >
                       {f.label}
-                      <span className="text-xs text-muted-foreground">{countOf(f.value)}</span>
+                      <span className="text-xs text-muted-foreground">{result.counts[f.value]}</span>
                     </Link>
                   </li>
                 );
@@ -134,6 +148,17 @@ export default async function JobApplicationsPage({ params, searchParams }: JobA
                   </li>
                 ))}
               </ul>
+            )}
+            {/* Chuyển trang giữ nguyên tab đang xem (?status=) */}
+            {result.totalPages > 1 && (
+              <div className="mt-8">
+                <Pagination
+                  page={page}
+                  totalPages={result.totalPages}
+                  basePath={`/employer/jobs/${id}`}
+                  searchParams={{ status: filter === "all" ? undefined : filter }}
+                />
+              </div>
             )}
           </div>
         </>

@@ -17,12 +17,13 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 **Ứng viên**
 - Hồ sơ: thông tin chung, kỹ năng, kinh nghiệm, học vấn, liên kết mạng xã hội.
 - Quản lý CV (PDF/DOC/DOCX ≤ 5MB); nộp đơn bằng CV trong hồ sơ hoặc tải file riêng, kèm thư giới thiệu.
-- Theo dõi đơn: trạng thái, lịch phỏng vấn, phản hồi của nhà tuyển dụng; rút đơn và ứng tuyển lại.
+- Theo dõi đơn (có phân trang): trạng thái, lịch phỏng vấn, phản hồi của nhà tuyển dụng; rút đơn và ứng tuyển lại.
 - Lưu tin để xem sau (nút trên thẻ tin và trang chi tiết), trang "Việc đã lưu" có phân trang.
 
 **Nhà tuyển dụng**
 - Trang tổng quan: số tin đang hiện, đơn chưa xem, biểu đồ 6 tháng, tin nhiều đơn nhất.
-- Thông tin công ty và logo; đăng, sửa, đổi trạng thái, xoá tin. Tin hết hạn nộp được báo qua thông báo; gia hạn thì tin tự mở lại.
+- Thông tin công ty và logo; đăng, sửa, đổi trạng thái, xoá tin (danh sách tin có phân trang). Tin hết hạn nộp được báo qua thông báo; gia hạn thì tin tự mở lại.
+- Đơn theo từng tin: lọc theo trạng thái (kèm số đơn mỗi trạng thái), phân trang.
 - Xử lý đơn: xem hồ sơ và CV ứng viên, đổi trạng thái kèm phản hồi, hẹn phỏng vấn, ghi chú nội bộ (ứng viên không thấy).
 
 **Quản trị viên**
@@ -186,8 +187,8 @@ Mọi API có tiền tố `/api`. Ký hiệu: 🔓 công khai, 🔑 cần đăng
 | Nhóm | Endpoint chính |
 |---|---|
 | Auth `/auth` | `POST /register`, `POST /login`, `POST /logout`, `GET /me`, `PUT /me`, `PUT /password`, `POST /forgot-password`, `POST /reset-password` |
-| Việc làm `/jobs` | `GET /` 🔓 (lọc, phân trang), `GET /:id` 🔓, `GET /:id/similar` 🔓, `POST /`, `PUT /:id`, `PUT /:id/status`, `DELETE /:id` [EMP, AD], `GET /employer/myjobs` [EMP] |
-| Ứng tuyển `/applications` | `POST /apply`, `PUT /:id/cancel`, `GET /user/myapplications` [JS]; `GET /job/:jobId`, `PUT /:id/status`, `PUT /:id/schedule-interview`, `PUT /:id/notes` [EMP, AD]; `GET /:id`, `GET /:id/cv` 🔑 |
+| Việc làm `/jobs` | `GET /` 🔓 (lọc, phân trang), `GET /:id` 🔓, `GET /:id/similar` 🔓, `POST /`, `PUT /:id`, `PUT /:id/status`, `DELETE /:id` [EMP, AD], `GET /employer/myjobs` (phân trang), `GET /employer/myjobs/:id` [EMP] |
+| Ứng tuyển `/applications` | `POST /apply`, `PUT /:id/cancel`, `GET /user/myapplications` (phân trang, `?job=`) [JS]; `GET /job/:jobId` (phân trang, `?status=`), `PUT /:id/status`, `PUT /:id/schedule-interview`, `PUT /:id/notes` [EMP, AD]; `GET /:id`, `GET /:id/cv` 🔑 |
 | Hồ sơ `/profiles` | `GET`, `POST`, `PUT /` (kèm kinh nghiệm, học vấn) [JS]; `PUT`/`DELETE /avatar` 🔑; `DELETE /` 🔑 (xoá tài khoản) |
 | CV `/cv` | `PUT /upload`, `DELETE /` [JS]; `GET /:filename` 🔑 (chủ CV, admin, NTD có đơn dùng CV đó) |
 | Công ty `/companies` | `GET /all`, `GET /:id` 🔓; `GET`, `POST`, `PUT /`, `PUT /logo`, `GET /stats` [EMP] |

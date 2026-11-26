@@ -8,11 +8,12 @@ import type {
   AdminJob,
   AdminList,
   AdminUser,
+  ApplicationStatus,
   AuthUser,
   Category,
   CompanyListResponse,
   EmployerApplicationDetail,
-  EmployerApplicationItem,
+  EmployerApplicationListResponse,
   EmployerDashboard,
   EmployerJob,
   EmployerJobListResponse,
@@ -245,9 +246,20 @@ export async function getMyJob(id: string): Promise<EmployerJob | "notFound" | n
   }
 }
 
-// Đơn của một tin. Tin không phải của mình (403) hoặc không có (404) thì null.
-export async function getJobApplications(jobId: string): Promise<EmployerApplicationItem[] | null> {
-  return getWithCookie<EmployerApplicationItem[]>(`/api/applications/job/${encodeURIComponent(jobId)}`);
+export const JOB_APPLICATIONS_PER_PAGE = 20;
+
+// Đơn của một tin, phân trang, kèm số đơn theo từng trạng thái (counts) cho các tab.
+// status không có: mọi đơn trừ đơn đã rút. Tin không phải của mình (403) hoặc không có (404) thì null.
+export async function getJobApplications(
+  jobId: string,
+  status: ApplicationStatus | undefined,
+  page = 1
+): Promise<EmployerApplicationListResponse | null> {
+  const params = new URLSearchParams({ page: String(page), limit: String(JOB_APPLICATIONS_PER_PAGE) });
+  if (status) params.set("status", status);
+  return getBodyWithCookie<EmployerApplicationListResponse>(
+    `/api/applications/job/${encodeURIComponent(jobId)}?${params.toString()}`
+  );
 }
 
 // Chi tiết đơn cho NTD. Lưu ý: lần đầu NTD mở, backend đổi đơn "pending" thành "viewed" và báo cho ứng viên.
