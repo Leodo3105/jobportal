@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle } from "lucide-react";
 
+import { IndustryField } from "@/components/employer/industry-field";
 import { Field, errorProps } from "@/components/form-field";
 import { FormAlert } from "@/components/form-alert";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +61,6 @@ export function JobForm({ job, categories }: JobFormProps) {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
   const initial = toFormValues(job);
-  const categoryOptions = job?.category && !categories.includes(job.category) ? [job.category, ...categories] : categories;
 
   const {
     register,
@@ -141,20 +141,14 @@ export function JobForm({ job, categories }: JobFormProps) {
         </Field>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field id="category" label="Ngành nghề" error={errors.category?.message}>
-            {categoryOptions.length > 0 ? (
-              <NativeSelect id="category" {...register("category")} {...errorProps(errors.category, "category")}>
-                <option value="">Chọn ngành nghề</option>
-                {categoryOptions.map((name) => (
-                  <option key={name} value={name}>
-                    {name}
-                  </option>
-                ))}
-              </NativeSelect>
-            ) : (
-              <Input id="category" className="h-11" {...register("category")} {...errorProps(errors.category, "category")} />
-            )}
-          </Field>
+          <IndustryField
+            id="category"
+            industries={categories}
+            current={job?.category}
+            error={errors.category?.message}
+            {...register("category")}
+            {...errorProps(errors.category, "category")}
+          />
           <Field id="location" label="Địa điểm làm việc" error={errors.location?.message}>
             <Input id="location" className="h-11" placeholder="Hà Nội" {...register("location")} {...errorProps(errors.location, "location")} />
           </Field>

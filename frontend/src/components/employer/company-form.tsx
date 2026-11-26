@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle } from "lucide-react";
 
+import { IndustryField } from "@/components/employer/industry-field";
 import { Field, errorProps } from "@/components/form-field";
 import { FormAlert } from "@/components/form-alert";
 import { CompanyLogo } from "@/components/jobs/company-logo";
@@ -25,14 +26,12 @@ type Status = { type: "success" | "error"; message: string } | null;
 
 interface CompanyFormProps {
   company: MyCompany | null;
-  industries: string[]; // tên các ngành từ danh mục; rỗng thì cho gõ tự do
+  industries: string[]; // tên các ngành đang hiện trong danh mục
 }
 
 export function CompanyForm({ company, industries }: CompanyFormProps) {
   const router = useRouter();
   const [status, setStatus] = useState<Status>(null);
-  // Ngành hiện tại không có trong danh mục (dữ liệu cũ) thì vẫn thêm vào danh sách để không bị mất
-  const industryOptions = company?.industry && !industries.includes(company.industry) ? [company.industry, ...industries] : industries;
 
   const {
     register,
@@ -89,20 +88,14 @@ export function CompanyForm({ company, industries }: CompanyFormProps) {
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field id="industry" label="Ngành nghề" error={errors.industry?.message}>
-          {industryOptions.length > 0 ? (
-            <NativeSelect id="industry" {...register("industry")} {...errorProps(errors.industry, "industry")}>
-              <option value="">Chọn ngành nghề</option>
-              {industryOptions.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </NativeSelect>
-          ) : (
-            <Input id="industry" className="h-11" placeholder="Công nghệ thông tin" {...register("industry")} {...errorProps(errors.industry, "industry")} />
-          )}
-        </Field>
+        <IndustryField
+          id="industry"
+          industries={industries}
+          current={company?.industry}
+          error={errors.industry?.message}
+          {...register("industry")}
+          {...errorProps(errors.industry, "industry")}
+        />
         <Field id="companySize" label="Quy mô">
           <NativeSelect id="companySize" {...register("companySize")}>
             {SIZES.map((size) => (

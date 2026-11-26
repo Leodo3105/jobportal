@@ -22,7 +22,7 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 
 **Nhà tuyển dụng**
 - Trang tổng quan: số tin đang hiện, đơn chưa xem, biểu đồ 6 tháng, tin nhiều đơn nhất.
-- Thông tin công ty và logo; đăng, sửa, đổi trạng thái, xoá tin (danh sách tin có phân trang). Tin hết hạn nộp được báo qua thông báo; gia hạn thì tin tự mở lại.
+- Thông tin công ty và logo; ngành nghề của công ty và tin chọn từ danh mục do quản trị viên quản lý. Đăng, sửa, đổi trạng thái, xoá tin (danh sách tin có phân trang). Tin hết hạn nộp được báo qua thông báo; gia hạn thì tin tự mở lại.
 - Đơn theo từng tin: lọc theo trạng thái (kèm số đơn mỗi trạng thái), phân trang.
 - Xử lý đơn: xem hồ sơ và CV ứng viên, đổi trạng thái kèm phản hồi, hẹn phỏng vấn, ghi chú nội bộ (ứng viên không thấy).
 
@@ -86,6 +86,8 @@ cd backend
 npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"
 ```
 
+**Không chạy seed** (database trống): đăng nhập admin và tạo danh mục ngành nghề ở `/admin/categories` trước. Chưa có ngành nào thì nhà tuyển dụng không tạo được công ty hay đăng tin.
+
 **Chạy tác vụ định kỳ ngay** (không đợi tới đầu giờ): `cd backend && npm run tasks`.
 
 **Quên mật khẩu khi chạy ở máy:** để `SMTP_HOST` trống trong `.env`, link đặt lại mật khẩu được in ra console của backend thay vì gửi email.
@@ -114,7 +116,7 @@ Trình duyệt ─► caddy :8080 ─► frontend (Next.js) ─rewrite /api, /up
 | Việc | Lệnh |
 |---|---|
 | Dữ liệu demo | `docker compose exec -e NODE_ENV=development backend npm run seed` (seed tự chặn khi production, phải ghi đè rõ ràng) |
-| Tạo admin | `docker compose exec backend npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"` |
+| Tạo admin | `docker compose exec backend npm run create-admin -- admin@demo.vn "Demo@1234" "Quản trị"`, rồi tạo danh mục ngành ở `/admin/categories` nếu không chạy seed |
 | Xem log | `docker compose logs -f backend` |
 | Dừng (giữ dữ liệu) | `docker compose down` |
 | Dừng và xoá hết dữ liệu | `docker compose down -v` |
