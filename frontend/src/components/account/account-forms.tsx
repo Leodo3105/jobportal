@@ -17,8 +17,10 @@ import { deleteRequest, errorMessage, putForm, putJson } from "@/lib/api-client"
 import {
   accountSchema,
   changePasswordSchema,
+  deleteAccountSchema,
   type AccountValues,
   type ChangePasswordValues,
+  type DeleteAccountValues,
 } from "@/lib/validation/auth";
 import { IMAGE_EXTENSIONS, validateImageFile } from "@/lib/validation/image";
 
@@ -250,5 +252,105 @@ export function PasswordForm() {
         {isSubmitting ? "Đang đổi…" : "Đổi mật khẩu"}
       </Button>
     </form>
+  );
+}
+
+// ===== Xoá tài khoản =====
+
+// Những gì bị xoá theo, khớp backend/src/utils/deleteUserAccount.js
+const DELETED_DATA: Record<"jobseeker" | "employer", string[]> = {
+  jobseeker: ["Hồ sơ và CV", "Mọi đơn ứng tuyển (nhà tuyển dụng cũng không xem được nữa)", "Việc đã lưu"],
+  employer: [
+    "Thông tin công ty và logo",
+    "Mọi tin tuyển dụng",
+    "Toàn bộ đơn ứng viên đã nộp vào các tin đó (ứng viên cũng không xem được nữa)",
+  ],
+};
+
+// Hành động không hoàn tác được: bấm 2 bước tại chỗ (DESIGN.md), bước 2 phải nhập mật khẩu.
+// Admin không có khối này (backend trả 403).
+export function DeleteAccountForm({ role }: { role: "jobseeker" | "employer" }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<DeleteAccountValues>({
+    resolver: zodResolver(deleteAccountSchema),
+    defaultValues: { password: "" },
+  });
+
+  function cancel() {
+    reset(); // không để lại mật khẩu đã gõ
+    setServerError(null);
+    setConfirming(false);
+  }
+
+  async function onSubmit(values: DeleteAccountValues) {
+    setServerError(null);
+    try {
+      // Backend xoá tài khoản kèm toàn bộ dữ liệu và xoá cookie đăng nhập
+      await deleteRequest("/api/auth/me", { password: values.password });
+      router.push("/login?deleted=1");
+      router.refresh(); // header không còn tên người dùng
+    } catch (error) {
+      const message = errorMessage(error);
+      // Sai mật khẩu thì báo ngay dưới ô; lỗi khác (rate limit, mất kết nối) ở hộp phía trên
+      if (message === "Mật khẩu không đúng") {
+        setError("password", { message });
+      } else {
+        setServerError(message);
+      }
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="text-sm">
+        <p>Xoá vĩnh viễn tài khoản và mọi dữ liệu kèm theo, không khôi phục được:</p>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          {DELETED_DATA[role].map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+          <li>Thông báo và ảnh đại diện</li>
+        </ul>
+        {role === "employer" && (
+          <p className="mt-3 text-muted-foreground">Chỉ muốn ngừng tuyển? Đổi các tin sang &quot;Đã đóng&quot; ở trang Tin tuyển dụng.</p>
+        )}
+      </div>
+
+      {!confirming ? (
+        <Button variant="outline" className="self-start" onClick={() => setConfirming(true)}>
+          Xoá tài khoản
+        </Button>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4 border-t pt-4">
+          {serverError && <FormAlert>{serverError}</FormAlert>}
+          <Field id="deletePassword" label="Nhập mật khẩu để xác nhận" error={errors.password?.message}>
+            <PasswordInput
+              id="deletePassword"
+              autoComplete="current-password"
+              autoFocus // vừa bấm "Xoá tài khoản" thì gõ được ngay
+              className="h-11"
+              {...register("password")}
+              {...errorProps(errors.password, "deletePassword")}
+            />
+          </Field>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" onClick={cancel} disabled={isSubmitting}>
+              Giữ tài khoản
+            </Button>
+            <Button type="submit" variant="destructive" disabled={isSubmitting}>
+              {isSubmitting && <Spinner />}
+              {isSubmitting ? "Đang xoá…" : "Xoá vĩnh viễn"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </div>
   );
 }

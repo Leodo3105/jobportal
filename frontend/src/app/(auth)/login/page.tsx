@@ -15,9 +15,9 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; reset?: string }>;
+  searchParams: Promise<{ next?: string; reset?: string; deleted?: string }>;
 }) {
-  const { next, reset } = await searchParams;
+  const { next, reset, deleted } = await searchParams;
 
   // Đã đăng nhập rồi thì không cần trang này nữa, chuyển đi luôn
   const user = await getCurrentUser();
@@ -38,6 +38,12 @@ export default async function LoginPage({
       {reset === "success" && (
         <div className="mt-6">
           <FormAlert variant="success">Đặt lại mật khẩu thành công. Đăng nhập bằng mật khẩu mới.</FormAlert>
+        </div>
+      )}
+      {/* Vừa tự xoá tài khoản ở /account (backend đã xoá cookie) */}
+      {deleted === "1" && (
+        <div className="mt-6">
+          <FormAlert variant="success">Tài khoản của bạn đã được xoá.</FormAlert>
         </div>
       )}
 

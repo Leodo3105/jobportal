@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { AccountForm, AvatarForm, PasswordForm } from "@/components/account/account-forms";
+import { AccountForm, AvatarForm, DeleteAccountForm, PasswordForm } from "@/components/account/account-forms";
 import { getCurrentUser } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -45,6 +45,18 @@ export default async function AccountPage() {
             <PasswordForm />
           </div>
         </section>
+
+        {/* Admin không tự xoá được (backend trả 403), nên không hiện khối này */}
+        {user.role !== "admin" && (
+          <section aria-labelledby="delete-heading" className="rounded-xl border border-destructive/40 bg-card p-6">
+            <h2 id="delete-heading" className="text-lg font-semibold text-destructive">
+              Xoá tài khoản
+            </h2>
+            <div className="mt-4">
+              <DeleteAccountForm role={user.role} />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

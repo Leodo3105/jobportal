@@ -74,6 +74,13 @@ export const changePasswordSchema = z
   });
 export type ChangePasswordValues = z.infer<typeof changePasswordSchema>;
 
+// Tự xoá tài khoản: chỉ cần mật khẩu hiện tại để xác nhận (DELETE /api/auth/me)
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Vui lòng nhập mật khẩu để xác nhận"),
+});
+
+export type DeleteAccountValues = z.infer<typeof deleteAccountSchema>;
+
 // Khớp backend authController.js (updateMe): tên ≤ 50; số điện thoại 8-20 ký tự gồm số, khoảng trắng, + ( ) . -
 export const accountSchema = z.object({
   name: z.string().trim().min(1, "Vui lòng nhập tên").max(50, "Tên tối đa 50 ký tự"),

@@ -93,8 +93,13 @@ export function putEmpty<T>(path: string): Promise<T> {
   return send<T>("PUT", path);
 }
 
-export function deleteRequest<T>(path: string): Promise<T> {
-  return send<T>("DELETE", path);
+// body: chỉ khi API cần (ví dụ DELETE /api/auth/me cần { password })
+export function deleteRequest<T>(path: string, body?: object): Promise<T> {
+  if (!body) return send<T>("DELETE", path);
+  return send<T>("DELETE", path, {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 // Đổi một lỗi bất kỳ thành câu để hiện cho người dùng
