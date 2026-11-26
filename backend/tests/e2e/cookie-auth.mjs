@@ -7,6 +7,13 @@ import path from 'path';
 const [BE, BASE, MONGO, SERVER_LOG] = process.argv.slice(2);
 const require = createRequire(path.join(BE, 'package.json'));
 const mongoose = require('mongoose');
+
+// Ngành của công ty phải có trong danh mục. Bộ này không có admin nên ghi thẳng ngành "IT" vào DB test.
+{
+  const conn = await mongoose.createConnection(MONGO).asPromise();
+  await conn.collection('categories').insertOne({ name: 'IT', slug: 'it', type: 'industry', active: true });
+  await conn.close();
+}
 const FE = 'http://localhost:3000';
 
 let pass = 0, fail = 0;

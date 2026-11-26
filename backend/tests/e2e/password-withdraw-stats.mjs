@@ -43,6 +43,8 @@ const preexisting = new Set(
 );
 await mongoose.connect(MONGO);
 const users = mongoose.connection.db.collection('users');
+// Ngành của công ty/tin phải có trong danh mục. Bộ này không có admin nên ghi thẳng ngành "IT" vào DB test.
+await mongoose.connection.db.collection('categories').insertOne({ name: 'IT', slug: 'it', type: 'industry', active: true });
 
 const P = 'Passw0rd!';
 const NEWP = 'NewPassw0rd#';

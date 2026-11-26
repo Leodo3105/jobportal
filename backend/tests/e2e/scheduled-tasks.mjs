@@ -45,6 +45,7 @@ const E = await register('emp', 'employer');
 const E2 = await register('emp2', 'employer');
 execFileSync('node', ['scripts/createAdmin.js', 'admin@t.io', P, 'Admin'], { cwd: BE, env: { ...process.env, MONGO_URI: MONGO } });
 const A = (await api('POST', '/api/auth/login', { json: { email: 'admin@t.io', password: P } })).data.token;
+await api('POST', '/api/categories', { token: A, json: { name: 'IT', type: 'industry' } }); // ngành cho công ty/tin
 
 await api('POST', '/api/companies', { token: E, json: { name: 'ACME', description: 'Công ty phần mềm', industry: 'IT', location: 'HN' } });
 await api('POST', '/api/companies', { token: E2, json: { name: 'Free Corp', description: 'Gói miễn phí', industry: 'IT', location: 'HCM' } });

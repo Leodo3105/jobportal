@@ -1,5 +1,6 @@
 import Company from '../../models/employer/Company.js';
 import { checkCompany } from '../../utils/employerValidation.js';
+import checkIndustry from '../../utils/checkIndustry.js';
 import escapeRegex from '../../utils/escapeRegex.js';
 import queryString from '../../utils/queryString.js';
 import User from '../../models/User.js';
@@ -50,6 +51,12 @@ export const createOrUpdateCompany = async (req, res) => {
     const companyFields = { ...result.value, user: req.user.id };
 
     let company = await Company.findOne({ user: req.user.id });
+
+    // Ngành phải có trong danh mục; công ty giữ nguyên ngành cũ (kể cả ngành đã bị ẩn) thì không kiểm tra
+    const industry = await checkIndustry(companyFields.industry, company?.industry);
+    if (industry.error) {
+      return res.status(400).json({ success: false, error: industry.error });
+    }
 
     if (company) {
       // runValidators: không có thì findOneAndUpdate bỏ qua required/enum của schema

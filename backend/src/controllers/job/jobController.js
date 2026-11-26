@@ -8,6 +8,7 @@ import Company from '../../models/employer/Company.js';
 import escapeRegex from '../../utils/escapeRegex.js';
 import queryString from '../../utils/queryString.js';
 import { checkJob } from '../../utils/employerValidation.js';
+import checkIndustry from '../../utils/checkIndustry.js';
 import { paging, pageInfo } from '../../utils/pagination.js';
 
 const EMPLOYER_JOBS_PAGE_SIZE = 10;
@@ -56,6 +57,10 @@ export const createJob = async (req, res) => {
     const result = checkJob(req.body);
     if (result.error) {
       return res.status(400).json({ success: false, error: result.error });
+    }
+    const industry = await checkIndustry(result.value.category);
+    if (industry.error) {
+      return res.status(400).json({ success: false, error: industry.error });
     }
 
     const job = await Job.create({
@@ -263,6 +268,13 @@ export const updateJob = async (req, res) => {
       return res.status(400).json({ success: false, error: result.error });
     }
     const updates = result.value;
+    // Đổi ngành thì ngành mới phải có trong danh mục; giữ nguyên ngành cũ thì không kiểm tra
+    if (updates.category !== undefined) {
+      const industry = await checkIndustry(updates.category, job.category);
+      if (industry.error) {
+        return res.status(400).json({ success: false, error: industry.error });
+      }
+    }
 
     // Gia hạn tin đã hết hạn (tác vụ định kỳ đặt "expired") thì tự mở lại.
     // status vẫn không nhận từ body; server tự đặt. Gửi lại đúng hạn cũ (đã qua) thì tin giữ "expired".

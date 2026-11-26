@@ -52,6 +52,7 @@ execFileSync('node', ['scripts/createAdmin.js', 'admin@t.io', P, 'Boss'], { cwd:
 const adminLogin = await api('POST', '/api/auth/login', { json: { email: 'admin@t.io', password: P } });
 check('Script create-admin tạo được admin', adminLogin.status === 200 && adminLogin.data.user?.role === 'admin', `status ${adminLogin.status}, role ${adminLogin.data.user?.role}`);
 const A = adminLogin.data.token;
+await api('POST', '/api/categories', { token: A, json: { name: 'IT', type: 'industry' } }); // ngành cho công ty/tin
 
 // 6. company featured cannot be self-set
 const comp = await api('POST', '/api/companies', { token: E, json: { name: 'ACME', description: 'd', industry: 'IT', location: 'HN', featured: true } });

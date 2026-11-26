@@ -130,6 +130,15 @@ const logoDir = path.join(BE, 'uploads', 'logos');
 const logoCountBefore = fs.readdirSync(logoDir).length;
 await expect('tải logo khi chưa có công ty', 'PUT', '/api/companies/logo', 404, { token: E, form: fileForm('logo', 'logo.png', 'image/png', png) });
 check('PUT /api/companies/logo → chưa có công ty thì không để lại file logo', fs.readdirSync(logoDir).length === logoCountBefore, `trước ${logoCountBefore}, sau ${fs.readdirSync(logoDir).length}`);
+// Ngành của công ty/tin phải là danh mục ngành đang hiện. Lúc này "Công nghệ thông tin" đang bị ẩn (dòng trên).
+const companyBase = { name: 'ACME', description: 'Công ty phần mềm', location: 'Hà Nội' };
+await expect('tạo công ty với ngành không có trong danh mục trả 400', 'POST', '/api/companies', 400, { token: E, json: { ...companyBase, industry: 'Ngành lạ' } },
+  (r) => /không có trong danh sách/.test(r.data.error) || { ok: false, info: r.data.error });
+await expect('tạo công ty với ngành đã ẩn trả 400', 'POST', '/api/companies', 400, { token: E, json: { ...companyBase, industry: 'Công nghệ thông tin' } });
+await expect('tạo công ty với ngành là danh mục kỹ năng trả 400', 'POST', '/api/companies', 400, { token: E, json: { ...companyBase, industry: 'React' } });
+await expect('ngành là object trả 400 (không 500)', 'POST', '/api/companies', 400, { token: E, json: { ...companyBase, industry: { $ne: null } } });
+const itCat = await expect('admin tạo ngành IT', 'POST', '/api/categories', 201, { token: A, json: { name: 'IT', type: 'industry' } });
+const itCatId = itCat.data.data?._id;
 await expect('tạo', 'POST', '/api/companies', 201, { token: E, json: { name: 'ACME', description: 'Công ty phần mềm', industry: 'IT', location: 'Hà Nội', website: 'https://acme.vn' } });
 await expect('sửa', 'PUT', '/api/companies', 200, { token: E, json: { name: 'ACME Corp', description: 'Công ty phần mềm', industry: 'IT', location: 'Hà Nội' } }, (r) => r.data.data?.name === 'ACME Corp');
 const myCompany = await expect('', 'GET', '/api/companies', 200, { token: E }, (r) => r.data.data?.name === 'ACME Corp');
@@ -156,9 +165,22 @@ await expect('chưa có tin', 'GET', '/api/companies/stats', 200, { token: E }, 
 // ===================== Jobs =====================
 group = 'Jobs';
 const jobBody = { title: 'Lập trình viên React', description: 'Phát triển web', requirements: '2 năm kinh nghiệm', benefits: 'Lương tháng 13', location: 'Hà Nội', jobType: 'full-time', category: 'Công nghệ thông tin', skills: 'React, Node', experienceLevel: 'junior', salaryMin: 15000000, salaryMax: 25000000, applicationDeadline: '2030-01-01' };
-const job1 = await expect('', 'POST', '/api/jobs', 201, { token: E, json: jobBody }, (r) => r.data.data?.skills?.length === 2);
+await expect('đăng tin với ngành đã ẩn trả 400', 'POST', '/api/jobs', 400, { token: E, json: jobBody });
+await expect('đăng tin với ngành không có trong danh mục trả 400', 'POST', '/api/jobs', 400, { token: E, json: { ...jobBody, category: 'Ngành lạ' } });
+await api('PUT', `/api/categories/${catId}`, { token: A, json: { active: true } }); // hiện lại để đăng tin
+const job1 =await expect('', 'POST', '/api/jobs', 201, { token: E, json: jobBody }, (r) => r.data.data?.skills?.length === 2);
 const jobId = job1.data.data?._id;
 const job2Id = (await expect('tin thứ 2', 'POST', '/api/jobs', 201, { token: E, json: { ...jobBody, title: 'Backend Node.js', skills: ['Node'] } })).data.data?._id;
+// Admin ẩn ngành sau khi đã có tin/công ty dùng: giữ nguyên ngành cũ thì vẫn sửa được thông tin khác
+await api('PUT', `/api/categories/${catId}`, { token: A, json: { active: false } });
+await api('PUT', `/api/categories/${itCatId}`, { token: A, json: { active: false } });
+await expect('sửa tin giữ nguyên ngành đã ẩn vẫn được', 'PUT', `/api/jobs/${jobId}`, 200, { token: E, json: { ...jobBody, title: 'Lập trình viên React' } });
+await expect('sửa tin đổi sang ngành đã ẩn khác trả 400', 'PUT', `/api/jobs/${jobId}`, 400, { token: E, json: { category: 'IT' } });
+await expect('sửa tin đổi sang ngành không có trả 400', 'PUT', `/api/jobs/${jobId}`, 400, { token: E, json: { category: 'Ngành lạ' } });
+await expect('sửa công ty giữ nguyên ngành đã ẩn vẫn được', 'PUT', '/api/companies', 200, { token: E, json: { ...companyBase, name: 'ACME Corp', industry: 'IT', companySize: '51-200', foundedYear: 2015, website: 'https://acme.vn' } });
+await expect('sửa công ty đổi sang ngành đã ẩn khác trả 400', 'PUT', '/api/companies', 400, { token: E, json: { ...companyBase, name: 'ACME Corp', industry: 'Công nghệ thông tin' } });
+await api('PUT', `/api/categories/${catId}`, { token: A, json: { active: true } });
+await api('PUT', `/api/categories/${itCatId}`, { token: A, json: { active: true } });
 // --- Trang công ty công khai ---
 await expect('danh sách công ty không lộ user/subscription', 'GET', '/api/companies/all', 200, {},
   (r) => (r.data.count >= 1 && !r.data.data.some((c) => 'user' in c || 'subscription' in c)) || { ok: false, info: Object.keys(r.data.data?.[0] ?? {}).join(',') });

@@ -9,6 +9,13 @@ const MONGO = process.argv[4];
 const require = createRequire(path.join(BE, 'package.json'));
 const mongoose = require('mongoose');
 
+// Ngành của công ty/tin phải có trong danh mục. Bộ này không có admin nên ghi thẳng ngành "IT" vào DB test.
+{
+  const conn = await mongoose.createConnection(MONGO).asPromise();
+  await conn.collection('categories').insertOne({ name: 'IT', slug: 'it', type: 'industry', active: true });
+  await conn.close();
+}
+
 let pass = 0, fail = 0;
 const check = (name, ok, extra = '') => {
   ok ? pass++ : fail++;

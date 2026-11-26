@@ -106,6 +106,8 @@ const badId = await api('PUT', '/api/admin/users/abc/status', { token: A, json: 
 check('Id người dùng sai định dạng trả 400', badId.status === 400, `status ${badId.status}`);
 
 // ---------- Tin tuyển dụng ----------
+// Ngành của công ty/tin phải có trong danh mục (phần "Danh mục" phía dưới dùng lại ngành này)
+const it = (await api('POST', '/api/categories', { token: A, json: { name: 'IT', type: 'industry' } })).data.data?._id;
 await api('POST', '/api/companies', { token: E, json: { name: 'ACME', description: 'Công ty phần mềm', industry: 'IT', location: 'HN' } });
 const companyId = (await api('GET', '/api/companies', { token: E })).data.data._id;
 const jobBody = { title: 'Dev', description: 'd', requirements: 'r', benefits: 'b', location: 'HN', jobType: 'full-time', category: 'IT', applicationDeadline: '2030-01-01' };
@@ -198,7 +200,6 @@ check('Tổng quan: hồ sơ không có field cvFile không bị đếm là "có
 check('Tổng quan: có số tin đang hiện (active còn hạn)', typeof d.jobs.open === 'number' && d.jobs.open <= d.jobs.active, JSON.stringify(d.jobs));
 
 // ---------- Danh mục ----------
-const it = (await api('POST', '/api/categories', { token: A, json: { name: 'IT', type: 'industry' } })).data.data?._id;
 const catList = await api('GET', '/api/admin/categories', { token: A });
 const itRow = catList.data.data?.find((c) => c._id === it);
 check('Admin xem danh mục kèm số tin/công ty đang dùng', catList.status === 200 && itRow?.jobCount === 1 && itRow?.companyCount === 1, JSON.stringify(itRow));
@@ -226,6 +227,7 @@ const publicActive = await api('GET', '/api/categories/type/industry?active=true
 check('Ẩn ngành: không còn trong danh sách ngành đang dùng', hide.status === 200 && !publicActive.data.data.some((c) => c._id === it));
 const allForAdmin = await api('GET', '/api/admin/categories?type=industry', { token: A });
 check('Admin vẫn thấy ngành đã ẩn', allForAdmin.data.data.some((c) => c._id === it && c.active === false));
+await api('PUT', `/api/categories/${it}`, { token: A, json: { active: true } }); // phần dưới cần tạo công ty/tin với ngành này
 
 // ---------- Xoá tài khoản ----------
 // NTD có công ty + logo + tin; ứng viên có đơn kèm file CV riêng vào tin đó
