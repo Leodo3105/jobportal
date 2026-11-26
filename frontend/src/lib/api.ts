@@ -93,6 +93,7 @@ export async function getSimilarJobs(id: string): Promise<Job[]> {
 export interface CompanyQuery {
   search?: string;
   industry?: string;
+  featured?: "true"; // chỉ công ty nổi bật (gói premium/enterprise còn hạn)
   page?: number;
   limit?: number;
 }

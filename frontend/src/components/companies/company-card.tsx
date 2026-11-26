@@ -6,24 +6,33 @@ import { Badge } from "@/components/ui/badge";
 import { companySizeLabel } from "@/lib/format";
 import type { PublicCompany } from "@/types/api";
 
-// Thẻ công ty trong lưới /companies. Cả thẻ bấm được nhưng chỉ có một link (giống job-card.tsx).
-export function CompanyCard({ company }: { company: PublicCompany }) {
+interface CompanyCardProps {
+  company: PublicCompany;
+  // Cấp tiêu đề của tên công ty: h2 ở trang /companies (dưới h1), h3 khi nằm trong một khối có h2 (trang chủ)
+  headingLevel?: "h2" | "h3";
+  // Ẩn nhãn "Nổi bật" khi cả khối đã là "Công ty nổi bật"
+  showFeaturedBadge?: boolean;
+}
+
+// Thẻ công ty (lưới /companies, khối công ty nổi bật ở trang chủ).
+// Cả thẻ bấm được nhưng chỉ có một link (giống job-card.tsx).
+export function CompanyCard({ company, headingLevel: Heading = "h2", showFeaturedBadge = true }: CompanyCardProps) {
   return (
     <article className="relative flex h-full flex-col gap-4 rounded-xl border bg-card p-5 transition-colors hover:border-primary">
       <div className="flex items-start gap-3">
         <CompanyLogo logo={company.logo} />
         <div className="min-w-0 flex-1">
-          <h2 className="font-semibold leading-snug">
+          <Heading className="font-semibold leading-snug">
             <Link
               href={`/companies/${company._id}`}
               className="outline-none after:absolute after:inset-0 after:rounded-xl focus-visible:after:ring-[3px] focus-visible:after:ring-ring/50"
             >
               {company.name}
             </Link>
-          </h2>
+          </Heading>
           <p className="mt-0.5 truncate text-sm text-muted-foreground">{company.industry}</p>
         </div>
-        {company.featured && <Badge>Nổi bật</Badge>}
+        {showFeaturedBadge && company.featured && <Badge>Nổi bật</Badge>}
       </div>
 
       <p className="line-clamp-2 text-sm text-muted-foreground">{company.description}</p>

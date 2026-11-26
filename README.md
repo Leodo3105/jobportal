@@ -11,7 +11,7 @@ Website tuyển dụng gồm ba vai trò: **ứng viên** tìm việc và nộp 
 
 **Khách (không cần đăng nhập)**
 - Tìm việc theo từ khoá, địa điểm, ngành nghề; phân trang; xem chi tiết tin và việc tương tự.
-- Danh sách công ty, trang công ty kèm các việc đang tuyển.
+- Danh sách công ty, trang công ty kèm các việc đang tuyển. Trang chủ có khối công ty nổi bật (công ty gói premium/enterprise còn hạn).
 - Đăng ký (ứng viên hoặc nhà tuyển dụng), đăng nhập, quên và đặt lại mật khẩu qua email.
 
 **Ứng viên**
@@ -77,7 +77,7 @@ Mở http://localhost:3000.
 | Vai trò | Email |
 |---|---|
 | Ứng viên | `ungvien@demo.vn` |
-| Nhà tuyển dụng | `hr.techviet@demo.vn` |
+| Nhà tuyển dụng | `hr.techviet@demo.vn` (gói premium), `hr.greenmart@demo.vn` (gói premium), `tuyendung.saigonsoft@demo.vn` (gói miễn phí) |
 
 Tài khoản admin không đăng ký được trên giao diện, tạo bằng lệnh:
 

@@ -18,6 +18,8 @@ dotenv.config();
 
 const DEMO_DOMAIN = '@demo.vn';
 const DEMO_PASSWORD = 'Demo@1234';
+// Gói được hiện nổi bật (giống FEATURED_PLANS trong controllers/admin/adminController.js)
+const FEATURED_PLANS = ['premium', 'enterprise'];
 
 if (!process.env.MONGO_URI) {
   console.error('Thiếu MONGO_URI trong file .env');
@@ -49,7 +51,8 @@ const COMPANIES = [
     industry: 'Công nghệ thông tin',
     companySize: '201-500',
     location: 'Hà Nội',
-    foundedYear: 2015
+    foundedYear: 2015,
+    plan: 'premium'
   },
   {
     email: `tuyendung.saigonsoft${DEMO_DOMAIN}`,
@@ -71,18 +74,20 @@ const COMPANIES = [
     industry: 'Kinh doanh - Bán hàng',
     companySize: '1000+',
     location: 'Đà Nẵng',
-    foundedYear: 2010
+    foundedYear: 2010,
+    plan: 'premium'
   }
 ];
 
-// company = vị trí trong mảng COMPANIES ở trên
+// company = vị trí trong mảng COMPANIES ở trên.
+// Không đặt featured ở đây: tin nổi bật theo gói của công ty (plan premium/enterprise), giống khi admin đổi gói.
 const JOBS = [
-  { company: 0, title: 'Backend Developer (Node.js)', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'junior', skills: ['Node.js', 'Express', 'MongoDB', 'REST API'], salaryMin: 15000000, salaryMax: 25000000, featured: true },
-  { company: 0, title: 'Frontend Developer (React/Next.js)', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS'], salaryMin: 20000000, salaryMax: 35000000, featured: true },
+  { company: 0, title: 'Backend Developer (Node.js)', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'junior', skills: ['Node.js', 'Express', 'MongoDB', 'REST API'], salaryMin: 15000000, salaryMax: 25000000 },
+  { company: 0, title: 'Frontend Developer (React/Next.js)', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS'], salaryMin: 20000000, salaryMax: 35000000 },
   { company: 0, title: 'Thực tập sinh Backend', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'internship', experienceLevel: 'entry', skills: ['JavaScript', 'SQL', 'Git'], salaryMin: 3000000, salaryMax: 5000000 },
   { company: 0, title: 'Tester / QA Engineer', category: 'Công nghệ thông tin', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'junior', skills: ['Manual Test', 'Postman', 'Selenium'], salaryMin: 12000000, salaryMax: 18000000 },
   { company: 0, title: 'UI/UX Designer', category: 'Thiết kế', location: 'Hà Nội', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['Figma', 'Design System', 'User Research'], salaryMin: 18000000, salaryMax: 28000000 },
-  { company: 1, title: 'Fullstack Developer (Node.js + React)', category: 'Công nghệ thông tin', location: 'Hồ Chí Minh', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['Node.js', 'React', 'PostgreSQL', 'Docker'], salaryMin: 25000000, salaryMax: 40000000, featured: true },
+  { company: 1, title: 'Fullstack Developer (Node.js + React)', category: 'Công nghệ thông tin', location: 'Hồ Chí Minh', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['Node.js', 'React', 'PostgreSQL', 'Docker'], salaryMin: 25000000, salaryMax: 40000000 },
   { company: 1, title: 'Senior Java Developer', category: 'Công nghệ thông tin', location: 'Hồ Chí Minh', jobType: 'full-time', experienceLevel: 'senior', skills: ['Java', 'Spring Boot', 'Microservices', 'Kafka'], salaryMin: 40000000, salaryMax: 60000000 },
   { company: 1, title: 'DevOps Engineer', category: 'Công nghệ thông tin', location: 'Hồ Chí Minh', jobType: 'full-time', experienceLevel: 'mid-level', skills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD'], salaryMin: 30000000, salaryMax: 45000000 },
   { company: 1, title: 'Kế toán tổng hợp', category: 'Kế toán - Tài chính', location: 'Hồ Chí Minh', jobType: 'full-time', experienceLevel: 'junior', skills: ['MISA', 'Excel', 'Thuế'], salaryMin: 10000000, salaryMax: 15000000 },
@@ -142,8 +147,14 @@ try {
       password: DEMO_PASSWORD,
       role: 'employer'
     });
-    const { email, contact, ...companyData } = c;
-    companies.push(await Company.create({ ...companyData, user: employer._id }));
+    const { email, contact, plan = 'free', ...companyData } = c;
+    // Giống setCompanySubscription của admin: gói premium/enterprise thì công ty (và tin, ở bước 4) nổi bật.
+    // Gói free không đặt endDate riêng (model tự đặt +1 tháng, gói free không bao giờ hết hạn).
+    const featured = FEATURED_PLANS.includes(plan);
+    const subscription = plan === 'free'
+      ? { type: 'free', status: 'active' }
+      : { type: plan, startDate: new Date(), endDate: daysFromNow(365), status: 'active' };
+    companies.push(await Company.create({ ...companyData, subscription, featured, user: employer._id }));
   }
 
   // 4. Tin tuyển dụng
@@ -153,6 +164,7 @@ try {
       ...j,
       company: company._id,
       user: company.user,
+      featured: company.featured,
       description: `${company.name} đang tìm kiếm ${j.title} tham gia đội ngũ tại ${j.location}. Bạn sẽ làm việc cùng các đồng nghiệp giàu kinh nghiệm trong môi trường năng động.`,
       requirements: `- Có kiến thức về: ${j.skills.join(', ')}\n- Chủ động, có tinh thần trách nhiệm\n- Kỹ năng giao tiếp và làm việc nhóm tốt`,
       benefits: '- Lương tháng 13, thưởng theo hiệu quả công việc\n- Bảo hiểm đầy đủ theo luật lao động\n- 12 ngày phép năm, du lịch công ty hằng năm',
